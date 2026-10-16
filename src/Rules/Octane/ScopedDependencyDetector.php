@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use PHPStan\Reflection\ClassReflection;
 
 use function count;
+use function in_array;
 use function str_contains;
 use function str_replace;
 
@@ -34,32 +35,34 @@ final class ScopedDependencyDetector
     /** @return non-empty-list<string>|null */
     public function findCaptiveDependency(ClassReflection $class): array|null
     {
-        /** @var array<string, true> $visited */
-        $visited = [];
+        // Count attempts, not unique classes: a shorter path may expose
+        // a dependency hidden behind the depth limit on an earlier path.
+        $explored = 0;
 
-        return $this->walk($class, [], $visited);
+        return $this->walk($class, [], $explored);
     }
 
     /**
      * @param list<string>        $path
-     * @param array<string, true> $visited
      *
      * @return non-empty-list<string>|null
      */
-    private function walk(ClassReflection $class, array $path, array &$visited): array|null
+    private function walk(ClassReflection $class, array $path, int &$explored): array|null
     {
-        if (count($path) >= self::MAX_DEPTH || count($visited) >= self::MAX_CLASSES) {
+        if (count($path) >= self::MAX_DEPTH || $explored >= self::MAX_CLASSES) {
             return null;
         }
 
         $name = $class->getName();
 
-        if (isset($visited[$name])) {
+        // Only a cycle on the current path is unsafe to traverse. A global
+        // visited set loses valid shorter routes after a depth-limited walk.
+        if (in_array($name, $path, true)) {
             return null;
         }
 
-        $visited[$name] = true;
-        $path[]         = $name;
+        $explored++;
+        $path[] = $name;
 
         if ($this->isScoped($class)) {
             return $path;
@@ -107,7 +110,7 @@ final class ScopedDependencyDetector
                 continue;
             }
 
-            $found = $this->walk($dependency, $path, $visited);
+            $found = $this->walk($dependency, $path, $explored);
 
             if ($found !== null) {
                 return $found;
