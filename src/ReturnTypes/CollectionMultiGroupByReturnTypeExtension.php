@@ -85,6 +85,13 @@ final class CollectionMultiGroupByReturnTypeExtension implements DynamicMethodRe
             return null;
         }
 
+        // Laravel treats callable arrays like [ClassName::class, 'method'] as
+        // a single callback, not as multiple grouping selectors. Even a
+        // possibly callable pair must keep the framework's return type.
+        if ($depth === 2 && ! $groupByType->isCallable()->no()) {
+            return null;
+        }
+
         foreach ($groups as $group) {
             if (! $group->isString()->yes() && ! $group->isCallable()->yes()) {
                 return null;
