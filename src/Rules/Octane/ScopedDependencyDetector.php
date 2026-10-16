@@ -108,7 +108,7 @@ final class ScopedDependencyDetector
                 }
 
                 $seen[$name] = true;
-                $queue[]    = ['class' => $dependency, 'path' => [...$path, $name]];
+                $queue[]     = ['class' => $dependency, 'path' => [...$path, $name]];
             }
         }
 
