@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Type;
 
-use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use App\User;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection as SupportCollection;
 use PHPUnit\Framework\TestCase;
 
