@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Stringable;
 use function PHPStan\Testing\assertType;
 
-function test(ModelWithCasts $model, OtherModelWithCasts $other, ConditionalModelWithCasts $conditional, DynamicValueModelWithCasts $dynamic, PartiallyDynamicModelWithCasts $partial, PhpDocUnknownCastsModel $annotated): void
+function test(ModelWithCasts $model, OtherModelWithCasts $other, ConditionalModelWithCasts $conditional, DynamicValueModelWithCasts $dynamic, PartiallyDynamicModelWithCasts $partial, PhpDocUnknownCastsModel $annotated, PhpDocOptionalCastsModel $optional): void
 {
     assertType('bool', $model->integer);
     assertType(Stringable::class, $model->string);
@@ -30,6 +30,26 @@ function test(ModelWithCasts $model, OtherModelWithCasts $other, ConditionalMode
 
     // A PHPDoc array shape is not necessarily a literal cast value.
     assertType('mixed', $annotated->integer);
+
+    // Optional casts() keys can override a conflicting $casts value.
+    assertType('mixed', $optional->integer);
+}
+
+class PhpDocOptionalCastsModel extends Model
+{
+    protected $table = 'model_with_casts';
+
+    protected $casts = ['integer' => 'bool'];
+
+    /** @return array{integer?: string} */
+    protected function casts(): array
+    {
+        if ($this->getConnectionName() === 'another') {
+            return ['integer' => 'string'];
+        }
+
+        return [];
+    }
 }
 
 class PhpDocUnknownCastsModel extends Model

@@ -55,9 +55,11 @@ use stdClass;
 use Stringable;
 
 use function array_key_exists;
+use function array_keys;
 use function class_exists;
 use function count;
 use function explode;
+use function in_array;
 use function is_string;
 use function str_replace;
 
@@ -320,24 +322,35 @@ class ModelCastHelper
 
         $arrays = $type->getConstantArrays();
 
-        if (count($arrays) !== 1 || $arrays[0]->getOptionalKeys() !== []) {
+        if ($arrays === []) {
             return $modelCasts;
         }
 
-        $keys   = $arrays[0]->getKeyTypes();
-        $values = $arrays[0]->getValueTypes();
+        foreach ($arrays as $array) {
+            $optional = $array->getOptionalKeys();
+            $values   = $array->getValueTypes();
 
-        foreach ($keys as $index => $key) {
-            if (! $this->isLiteralString($key)) {
-                continue;
+            foreach ($array->getKeyTypes() as $index => $key) {
+                if (! $this->isLiteralString($key)) {
+                    // An unknown key can shadow any existing $casts entry.
+                    foreach (array_keys($modelCasts) as $name) {
+                        $modelCasts[$name] = new MixedType();
+                    }
+
+                    continue;
+                }
+
+                $name  = $key->getConstantStrings()[0]->getValue();
+                $value = $values[$index];
+
+                // Optional keys and alternative constant arrays can override
+                // existing $casts only on some paths; never select one branch.
+                $modelCasts[$name] = count($arrays) === 1
+                    && ! in_array($index, $optional, true)
+                    && $this->isLiteralString($value)
+                    ? str_replace('\\\\', '\\', $value->getConstantStrings()[0]->getValue())
+                    : new MixedType();
             }
-
-            $name  = $key->getConstantStrings()[0]->getValue();
-            $value = $values[$index];
-
-            $modelCasts[$name] = $this->isLiteralString($value)
-                ? str_replace('\\\\', '\\', $value->getConstantStrings()[0]->getValue())
-                : new MixedType();
         }
 
         return $modelCasts;
