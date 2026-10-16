@@ -10,8 +10,6 @@ use PhpParser\Node\Expr\MethodCall;
 use PHPStan\Analyser\Scope;
 use PHPStan\Reflection\MethodReflection;
 use PHPStan\Type\BenevolentUnionType;
-use PHPStan\Type\Constant\ConstantBooleanType;
-use PHPStan\Type\Constant\ConstantArrayType;
 use PHPStan\Type\DynamicMethodReturnTypeExtension;
 use PHPStan\Type\ErrorType;
 use PHPStan\Type\Generic\GenericObjectType;
@@ -48,7 +46,7 @@ final class CollectionMultiGroupByReturnTypeExtension implements DynamicMethodRe
 
     public function getTypeFromMethodCall(MethodReflection $methodReflection, MethodCall $methodCall, Scope $scope): Type|null
     {
-        $groupBy = null;
+        $groupBy      = null;
         $preserveKeys = null;
 
         foreach ($methodCall->getArgs() as $index => $argument) {
@@ -69,14 +67,19 @@ final class CollectionMultiGroupByReturnTypeExtension implements DynamicMethodRe
             return null;
         }
 
-        $groupByType = $scope->getType($groupBy);
+        $groupByType    = $scope->getType($groupBy);
+        $constantArrays = $groupByType->getConstantArrays();
 
-        if (! $groupByType instanceof ConstantArrayType || $groupByType->getOptionalKeys() !== []) {
+        if (
+            ! $groupByType->isConstantArray()->yes()
+            || count($constantArrays) !== 1
+            || $constantArrays[0]->getOptionalKeys() !== []
+        ) {
             return null;
         }
 
-        $groups = $groupByType->getValueTypes();
-        $depth = count($groups);
+        $groups = $constantArrays[0]->getValueTypes();
+        $depth  = count($groups);
 
         if ($depth < 2 || $depth > self::MAX_GROUPS) {
             return null;
@@ -90,18 +93,20 @@ final class CollectionMultiGroupByReturnTypeExtension implements DynamicMethodRe
 
         $receiver = $scope->getType($methodCall->var);
 
-        if (! $receiver instanceof GenericObjectType) {
+        $receiverClasses = $receiver->getObjectClassNames();
+
+        if (count($receiverClasses) !== 1) {
             return null;
         }
 
         // A custom collection may override groupBy() with different semantics.
-        $collectionClass = $receiver->getClassName();
+        $collectionClass = $receiverClasses[0];
 
         if (! in_array($collectionClass, [Collection::class, EloquentCollection::class], true)) {
             return null;
         }
 
-        $keyType = $receiver->getTemplateType(Collection::class, 'TKey');
+        $keyType   = $receiver->getTemplateType(Collection::class, 'TKey');
         $valueType = $receiver->getTemplateType(Collection::class, 'TValue');
 
         if ($keyType instanceof ErrorType || $valueType instanceof ErrorType) {
@@ -117,11 +122,9 @@ final class CollectionMultiGroupByReturnTypeExtension implements DynamicMethodRe
                 return null;
             }
 
-            $constants = $preserveType->getConstantBooleans();
-
-            if (count($constants) === 1 && $constants[0] instanceof ConstantBooleanType) {
-                $leafKeyType = $constants[0]->getValue() ? $keyType : new IntegerType();
-            } else {
+            if ($preserveType->isTrue()->yes()) {
+                $leafKeyType = $keyType;
+            } elseif (! $preserveType->isFalse()->yes()) {
                 $leafKeyType = TypeCombinator::union(new IntegerType(), $keyType);
             }
         }
@@ -133,7 +136,7 @@ final class CollectionMultiGroupByReturnTypeExtension implements DynamicMethodRe
             ? EloquentCollection::class
             : Collection::class;
 
-        $result = new GenericObjectType($leafCollection, [$leafKeyType, $valueType]);
+        $result       = new GenericObjectType($leafCollection, [$leafKeyType, $valueType]);
         $groupKeyType = new BenevolentUnionType([new IntegerType(), new StringType()]);
 
         for ($level = 0; $level < $depth; $level++) {
