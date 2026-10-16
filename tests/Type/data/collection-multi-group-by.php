@@ -83,3 +83,22 @@ function dynamicSelectors(
         $rows->groupBy(['department']),
     );
 }
+
+final class GroupingCallback
+{
+    /** @param array{department: string, region: string, city: string} $record */
+    public static function byDepartment(array $record): string
+    {
+        return $record['department'];
+    }
+}
+
+/** @param SupportCollection<string, array{department: string, region: string, city: string}> $rows */
+function arrayCallableIsOneSelector(SupportCollection $rows): void
+{
+    // Laravel's useAsCallable() handles this as one callback, not two levels.
+    assertType(
+        'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<int, mixed>>',
+        $rows->groupBy([GroupingCallback::class, 'byDepartment']),
+    );
+}
