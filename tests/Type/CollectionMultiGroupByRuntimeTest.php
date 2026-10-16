@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tests\Type;
 
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
-use Illuminate\Database\Eloquent\Model;
+use App\User;
 use Illuminate\Support\Collection as SupportCollection;
 use PHPUnit\Framework\TestCase;
 
@@ -40,7 +40,7 @@ final class CollectionMultiGroupByRuntimeTest extends TestCase
 
     public function testNonEmptyEloquentGroupByKeepsTypedModelLeaves(): void
     {
-        $model = new Model();
+        $model = new User();
         $model->setRawAttributes(['department' => 'sales', 'region' => 'EU']);
 
         $groups = (new EloquentCollection([$model]))->groupBy(['department', 'region']);
