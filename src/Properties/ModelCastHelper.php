@@ -58,14 +58,12 @@ use function array_key_exists;
 use function class_exists;
 use function count;
 use function explode;
+use function is_string;
 use function str_replace;
 
 class ModelCastHelper
 {
-    // Internal marker for known cast keys with unresolved values.
-    private const UNKNOWN_CAST = '__larastan_unknown_cast__';
-
-    /** @var array<string, array<string, string>> */
+    /** @var array<string, array<string, string|Type>> */
     private array $modelCasts = [];
 
     /** @var array<string, Type> */
@@ -79,10 +77,10 @@ class ModelCastHelper
     ) {
     }
 
-    public function getReadableType(string $cast, Type $originalType): Type
+    public function getReadableType(string|Type $cast, Type $originalType): Type
     {
-        if ($cast === self::UNKNOWN_CAST) {
-            return new MixedType();
+        if (! is_string($cast)) {
+            return $cast;
         }
 
         $cast = $this->parseCast($cast);
@@ -143,10 +141,10 @@ class ModelCastHelper
         return new MixedType();
     }
 
-    public function getWriteableType(string $cast, Type $originalType): Type
+    public function getWriteableType(string|Type $cast, Type $originalType): Type
     {
-        if ($cast === self::UNKNOWN_CAST) {
-            return new MixedType();
+        if (! is_string($cast)) {
+            return $cast;
         }
 
         $cast = $this->parseCast($cast);
@@ -242,7 +240,7 @@ class ModelCastHelper
         return array_key_exists($propertyName, $modelCasts);
     }
 
-    public function getCastForProperty(ClassReflection $modelClassReflection, string $propertyName): string|null
+    public function getCastForProperty(ClassReflection $modelClassReflection, string $propertyName): string|Type|null
     {
         $modelCasts = $this->getModelCasts($modelClassReflection);
 
@@ -250,7 +248,7 @@ class ModelCastHelper
     }
 
     /**
-     * @return array<string, string>
+     * @return array<string, string|Type>
      *
      * @throws ShouldNotHappenException
      * @throws MissingMethodFromReflectionException
@@ -310,8 +308,9 @@ class ModelCastHelper
      * Preserve exact casts and widen unresolved values for a known key.
      * This applies equally to parsed bodies and declared PHPDoc array shapes.
      *
-     * @param array<string, string> $modelCasts
-     * @return array<string, string>
+     * @param array<string, string|Type> $modelCasts
+     *
+     * @return array<string, string|Type>
      */
     private function mergeCastsFromType(array $modelCasts, Type $type): array
     {
@@ -338,7 +337,7 @@ class ModelCastHelper
 
             $modelCasts[$name] = $this->isLiteralString($value)
                 ? str_replace('\\\\', '\\', $value->getConstantStrings()[0]->getValue())
-                : self::UNKNOWN_CAST;
+                : new MixedType();
         }
 
         return $modelCasts;
