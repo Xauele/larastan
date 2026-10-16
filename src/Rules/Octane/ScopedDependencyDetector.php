@@ -43,7 +43,7 @@ final class ScopedDependencyDetector
     }
 
     /**
-     * @param list<string>        $path
+     * @param list<string> $path
      *
      * @return non-empty-list<string>|null
      */
