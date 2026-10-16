@@ -42,6 +42,11 @@ function test(SupportCollection $rows, EloquentCollection $users, bool $preserve
     );
 
     assertType(
+        'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<int, array{department: string, region: string, city: string}>>>',
+        $rows->groupBy([fn (array $record): string => $record['department'], 'city']),
+    );
+
+    assertType(
         'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Database\Eloquent\Collection<int, App\User>>>',
         $users->groupBy(['id', 'name']),
     );
@@ -52,3 +57,29 @@ function test(SupportCollection $rows, EloquentCollection $users, bool $preserve
     );
 }
 
+/**
+ * @param SupportCollection<string, array{department: string, region: string, city: string}> $rows
+ * @param list<string> $dynamicSelectors
+ * @param array{0: string, 1?: string} $optionalSelectors
+ */
+function dynamicSelectors(
+    SupportCollection $rows,
+    array $dynamicSelectors,
+    array $optionalSelectors,
+): void {
+    // The existing stub is intentionally preserved for non-constant groups.
+    assertType(
+        'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<int, mixed>>',
+        $rows->groupBy($dynamicSelectors),
+    );
+
+    assertType(
+        'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<int, mixed>>',
+        $rows->groupBy($optionalSelectors),
+    );
+
+    assertType(
+        'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<int, mixed>>',
+        $rows->groupBy(['department']),
+    );
+}
