@@ -84,3 +84,15 @@ function register(Container $app): void
 {
     $app->singleton(Root::class);
 }
+
+final class PrioritizedRoot
+{
+    public function __construct(Intermediate $indirect, Request $direct)
+    {
+    }
+}
+
+function registerPrioritized(Container $app): void
+{
+    $app->singleton(PrioritizedRoot::class);
+}

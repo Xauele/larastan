@@ -59,6 +59,22 @@ final class SingletonBindingScopeRuleTest extends RuleTestCase
                 85,
                 'Register the owner as scoped(), or resolve the current context when handling each request/job.',
             ],
+            [
+                'Singleton ScopeCompatibilityDiamond\\PrioritizedRoot captures a scoped dependency: ScopeCompatibilityDiamond\\PrioritizedRoot -> Illuminate\\Http\\Request.',
+                97,
+                'Register the owner as scoped(), or resolve the current context when handling each request/job.',
+            ],
+        ]);
+    }
+
+    public function testRequiredNullableRequestIsStillResolvedFromContainer(): void
+    {
+        $this->analyse([__DIR__ . '/data/CaptiveScopeNullableRequest.php'], [
+            [
+                'Singleton ScopeCompatibilityNullableRequest\\RequiredNullableConsumer captures a scoped dependency: ScopeCompatibilityNullableRequest\\RequiredNullableConsumer -> Illuminate\\Http\\Request.',
+                26,
+                'Register the owner as scoped(), or resolve the current context when handling each request/job.',
+            ],
         ]);
     }
 

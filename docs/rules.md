@@ -293,8 +293,10 @@ To minimize false positives, the rule deliberately skips runtime factories,
 dynamic bindings, unresolvable interfaces, optional or ambiguous constructor
 parameters, and transitive paths through vendor code. It recognizes an
 explicit `#[Scoped]` declaration, but cannot infer arbitrary registrations
-performed elsewhere through `scoped()` or conditional providers. Analysis is
-bounded to eight constructor levels and 64 visited classes.
+performed elsewhere through `scoped()` or conditional providers. Analysis uses bounded breadth-first traversal to report the shortest statically
+known chain, within eight class levels and 64 visited classes. Required
+nullable object parameters (without defaults) are analyzed; optional
+parameters remain conservative.
 
 When the warning is valid, bind the owner as `scoped()` / `#[Scoped]`, or
 resolve current request data at call time, rather than retaining it in the
