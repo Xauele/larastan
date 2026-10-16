@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Type;
 
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection as SupportCollection;
 use PHPUnit\Framework\TestCase;
 
@@ -35,6 +36,21 @@ final class CollectionMultiGroupByRuntimeTest extends TestCase
         self::assertInstanceOf(EloquentCollection::class, $groups);
         self::assertInstanceOf(SupportCollection::class, $groups);
         self::assertSame([], $groups->all());
+    }
+
+    public function testNonEmptyEloquentGroupByKeepsTypedModelLeaves(): void
+    {
+        $model = new Model();
+        $model->setRawAttributes(['department' => 'sales', 'region' => 'EU']);
+
+        $groups = (new EloquentCollection([$model]))->groupBy(['department', 'region']);
+
+        // Eloquent converts outer mapped collections to Support collections
+        // but keeps Eloquent collections at the leaf containing actual models.
+        self::assertInstanceOf(SupportCollection::class, $groups);
+        self::assertInstanceOf(SupportCollection::class, $groups['sales']);
+        self::assertInstanceOf(EloquentCollection::class, $groups['sales']['EU']);
+        self::assertSame([$model], $groups['sales']['EU']->all());
     }
 
     public function testCallableArrayRepresentsOneGroupingSelector(): void
