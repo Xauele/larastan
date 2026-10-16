@@ -41,6 +41,7 @@ use PHPStan\Type\ArrayType;
 use PHPStan\Type\BenevolentUnionType;
 use PHPStan\Type\BooleanType;
 use PHPStan\Type\Constant\ConstantIntegerType;
+use PHPStan\Type\Constant\ConstantStringType;
 use PHPStan\Type\FloatType;
 use PHPStan\Type\Generic\GenericObjectType;
 use PHPStan\Type\IntegerType;
@@ -287,7 +288,9 @@ class ModelCastHelper
         ) {
             $parsed = $this->parseCastsMethod($modelClassReflection);
 
-            if ($parsed->isConstantArray()->yes()) {
+            // A literal array shape can still contain dynamic cast values.
+            // Never replace runtime cast names with PHPStan union/mixed types.
+            if ($this->hasLiteralCasts($parsed)) {
                 $castsMethodReturnType = $parsed;
             }
         }
@@ -311,6 +314,37 @@ class ModelCastHelper
         $this->modelCasts[$className] = $modelCasts;
 
         return $modelCasts;
+    }
+
+    /**
+     * PHPStan's constant-array type guarantees the shape, not the values.
+     * Cast names must be literal strings before they can override getCasts().
+     */
+    private function hasLiteralCasts(Type $type): bool
+    {
+        if (! $type->isConstantArray()->yes()) {
+            return false;
+        }
+
+        $arrays = $type->getConstantArrays();
+
+        if (count($arrays) !== 1 || $arrays[0]->getOptionalKeys() !== []) {
+            return false;
+        }
+
+        foreach ($arrays[0]->getKeyTypes() as $key) {
+            if (! $key instanceof ConstantStringType) {
+                return false;
+            }
+        }
+
+        foreach ($arrays[0]->getValueTypes() as $value) {
+            if (! $value instanceof ConstantStringType) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private function parseCastsMethod(ClassReflection $modelClassReflection): Type
