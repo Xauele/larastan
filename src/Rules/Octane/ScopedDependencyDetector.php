@@ -41,8 +41,9 @@ final class ScopedDependencyDetector
     }
 
     /**
-     * @param list<string> $path
+     * @param list<string>         $path
      * @param array<string, true> $visited
+     *
      * @return non-empty-list<string>|null
      */
     private function walk(ClassReflection $class, array $path, array &$visited): array|null

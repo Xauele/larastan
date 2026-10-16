@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Larastan\Larastan\Rules\Octane;
 
 use PhpParser\Node;
-use PHPStan\Node\InClassMethodNode;
 use PHPStan\Analyser\Scope;
+use PHPStan\Node\InClassMethodNode;
 use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleError;
 use PHPStan\Rules\RuleErrorBuilder;
@@ -48,9 +48,12 @@ final class SingletonAttributeScopeRule implements Rule
             return [];
         }
 
-        return [RuleErrorBuilder::message('Singleton '.$class->getName().' captures a scoped dependency: '.implode(' -> ', $path).'.')
+        $message = 'Singleton ' . $class->getName() . ' captures a scoped dependency: ' . implode(' -> ', $path) . '.';
+        $error = RuleErrorBuilder::message($message)
             ->identifier('larastan.octaneCaptiveScopedDependency')
             ->tip('Remove #[Singleton] or pass request-scoped information at call time instead of retaining it.')
-            ->build()];
+            ->build();
+
+        return [$error];
     }
 }

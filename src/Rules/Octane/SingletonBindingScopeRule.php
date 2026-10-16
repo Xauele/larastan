@@ -75,10 +75,13 @@ final class SingletonBindingScopeRule implements Rule
             return [];
         }
 
-        return [RuleErrorBuilder::message('Singleton '.$class->getName().' captures a scoped dependency: '.implode(' -> ', $path).'.')
+        $message = 'Singleton ' . $class->getName() . ' captures a scoped dependency: ' . implode(' -> ', $path) . '.';
+        $error = RuleErrorBuilder::message($message)
             ->identifier('larastan.octaneCaptiveScopedDependency')
             ->tip('Register the owner as scoped(), or resolve the current context when handling each request/job.')
-            ->build()];
+            ->build();
+
+        return [$error];
     }
 
     /**
