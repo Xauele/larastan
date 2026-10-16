@@ -32,8 +32,13 @@ function test(SupportCollection $rows, EloquentCollection $users, bool $preserve
     );
 
     assertType(
-        'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), array{department: string, region: string, city: string}>>>',
+        'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<int|string, array{department: string, region: string, city: string}>>>',
         $rows->groupBy(['department', 'region'], $preserveKeys),
+    );
+
+    assertType(
+        'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<string, array{department: string, region: string, city: string}>>>',
+        $rows->groupBy(groupBy: ['department', 'city'], preserveKeys: true),
     );
 
     assertType(
