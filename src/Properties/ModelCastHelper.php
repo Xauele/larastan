@@ -41,7 +41,6 @@ use PHPStan\Type\ArrayType;
 use PHPStan\Type\BenevolentUnionType;
 use PHPStan\Type\BooleanType;
 use PHPStan\Type\Constant\ConstantIntegerType;
-use PHPStan\Type\Constant\ConstantStringType;
 use PHPStan\Type\FloatType;
 use PHPStan\Type\Generic\GenericObjectType;
 use PHPStan\Type\IntegerType;
@@ -333,18 +332,26 @@ class ModelCastHelper
         }
 
         foreach ($arrays[0]->getKeyTypes() as $key) {
-            if (! $key instanceof ConstantStringType) {
+            if (! $this->isLiteralString($key)) {
                 return false;
             }
         }
 
         foreach ($arrays[0]->getValueTypes() as $value) {
-            if (! $value instanceof ConstantStringType) {
+            if (! $this->isLiteralString($value)) {
                 return false;
             }
         }
 
         return true;
+    }
+
+    private function isLiteralString(Type $type): bool
+    {
+        // Use PHPStan's native type API, not instanceof checks on Type.
+        return $type->isString()->yes()
+            && $type->isConstantScalarValue()->yes()
+            && count($type->getConstantStrings()) === 1;
     }
 
     private function parseCastsMethod(ClassReflection $modelClassReflection): Type
