@@ -86,9 +86,9 @@ final class CollectionMultiGroupByReturnTypeExtension implements DynamicMethodRe
         }
 
         // Laravel treats callable arrays like [ClassName::class, 'method'] as
-        // a single callback, not as multiple grouping selectors. Even a
-        // possibly callable pair must keep the framework's return type.
-        if ($depth === 2 && ! $groupByType->isCallable()->no()) {
+        // one callback. Ordinary selector pairs can have maybe-callable types
+        // in PHPStan; only skip the extension for provably callable arrays.
+        if ($depth === 2 && $groupByType->isCallable()->yes()) {
             return null;
         }
 
