@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Casts\AsStringable;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Concerns\HasUniqueStringIds;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon as IlluminateCarbon;
 use Illuminate\Support\Collection;
@@ -25,7 +26,6 @@ use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Stringable as IlluminateStringable;
 use PhpParser\Node;
 use PhpParser\Node\Expr\Array_;
-use PhpParser\NodeFinder;
 use PHPStan\Analyser\OutOfClassScope;
 use PHPStan\Analyser\ScopeContext;
 use PHPStan\Analyser\ScopeFactory;
@@ -66,6 +66,9 @@ class ModelCastHelper
 {
     /** @var array<string, array<string, string>> */
     private array $modelCasts = [];
+
+    /** @var array<string, Type> */
+    private array $parsedCastsMethods = [];
 
     public function __construct(
         private ReflectionProvider $reflectionProvider,
@@ -267,13 +270,24 @@ class ModelCastHelper
 
         $modelCasts = $modelInstance->getCasts();
 
-        if ($this->parseModelCastsMethod) {
-            $castsMethodReturnType = $this->parseCastsMethod($modelClassReflection);
-        } else {
-            $castsMethodReturnType = $modelClassReflection->getMethod(
-                'casts',
-                new OutOfClassScope(),
-            )->getVariants()[0]->getReturnType();
+        $castsMethodReturnType = $modelClassReflection->getMethod(
+            'casts',
+            new OutOfClassScope(),
+        )->getVariants()[0]->getReturnType();
+
+        // Constant-array PHPDoc already provides the precise casts. Parse only
+        // when native `casts(): array` gives PHPStan insufficient information.
+        // Models inheriting the framework's empty casts() have nothing to parse.
+        if (
+            $this->parseModelCastsMethod
+            && ! $castsMethodReturnType->isConstantArray()->yes()
+            && $modelClassReflection->getNativeMethod('casts')->getDeclaringClass()->getName() !== Model::class
+        ) {
+            $parsed = $this->parseCastsMethod($modelClassReflection);
+
+            if ($parsed->isConstantArray()->yes()) {
+                $castsMethodReturnType = $parsed;
+            }
         }
 
         if ($castsMethodReturnType->isConstantArray()->yes()) {
@@ -299,36 +313,59 @@ class ModelCastHelper
 
     private function parseCastsMethod(ClassReflection $modelClassReflection): Type
     {
-        $castsMethod = $modelClassReflection->getNativeMethod('casts');
-        $fileName    = $castsMethod->getDeclaringClass()->getFileName();
+        $castsMethod    = $modelClassReflection->getNativeMethod('casts');
+        $declaringClass = $castsMethod->getDeclaringClass();
+        $className      = $declaringClass->getName();
+
+        if (isset($this->parsedCastsMethods[$className])) {
+            return $this->parsedCastsMethods[$className];
+        }
+
+        $fileName = $declaringClass->getFileName();
 
         if ($fileName === null) {
-            return new NullType();
+            return $this->parsedCastsMethods[$className] = new NullType();
         }
 
         $stmts = $this->parser->parseFile($fileName);
 
-        $castsMethodNode = (new NodeFinder())->findFirst($stmts, static function (Node $node) use ($castsMethod): bool {
-            return $node instanceof Node\Stmt\ClassMethod && $node->name->toString() === $castsMethod->getName();
-        });
+        // Look for the declaring class, not just the first casts() method in
+        // the file. A file can define several models with different casts.
+        foreach ($stmts as $statement) {
+            $namespace = $statement instanceof Node\Stmt\Namespace_ ? $statement->name?->toString() : null;
+            $classes   = $statement instanceof Node\Stmt\Namespace_ ? $statement->stmts : [$statement];
 
-        if ($castsMethodNode === null) {
-            return new NullType();
+            foreach ($classes as $class) {
+                if (! $class instanceof Node\Stmt\Class_ || $class->name === null) {
+                    continue;
+                }
+
+                $candidate = $namespace === null ? $class->name->toString() : $namespace . '\\' . $class->name->toString();
+
+                if ($candidate !== $className) {
+                    continue;
+                }
+
+                foreach ($class->getMethods() as $method) {
+                    if ($method->name->toString() !== $castsMethod->getName()) {
+                        continue;
+                    }
+
+                    // A direct array return is safe to infer. Branch-dependent
+                    // or delegated expressions retain the declared type.
+                    foreach ($method->stmts ?? [] as $bodyStatement) {
+                        if ($bodyStatement instanceof Node\Stmt\Return_ && $bodyStatement->expr instanceof Array_) {
+                            $scope = $this->scopeFactory->create(ScopeContext::create($fileName));
+
+                            return $this->parsedCastsMethods[$className] = $scope->getType($bodyStatement->expr);
+                        }
+                    }
+
+                    return $this->parsedCastsMethods[$className] = new NullType();
+                }
+            }
         }
 
-        /** @var Node\Stmt\Return_|null $returnNode */
-        $returnNode = (new NodeFinder())->findFirstInstanceOf($castsMethodNode, Node\Stmt\Return_::class);
-
-        if ($returnNode === null) {
-            return new NullType();
-        }
-
-        if (! $returnNode->expr instanceof Array_) {
-            return new NullType();
-        }
-
-        $scope = $this->scopeFactory->create(ScopeContext::create($fileName));
-
-        return $scope->getType($returnNode->expr);
+        return $this->parsedCastsMethods[$className] = new NullType();
     }
 }
