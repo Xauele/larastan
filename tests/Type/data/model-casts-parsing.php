@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Stringable;
 use function PHPStan\Testing\assertType;
 
-function test(ModelWithCasts $model, OtherModelWithCasts $other, ConditionalModelWithCasts $conditional, DynamicValueModelWithCasts $dynamic, PartiallyDynamicModelWithCasts $partial, PhpDocUnknownCastsModel $annotated, PhpDocOptionalCastsModel $optional): void
+function test(ModelWithCasts $model, OtherModelWithCasts $other, ConditionalModelWithCasts $conditional, DynamicValueModelWithCasts $dynamic, PartiallyDynamicModelWithCasts $partial, PhpDocUnknownCastsModel $annotated, PhpDocOptionalCastsModel $optional, SelfConstantCastsModel $self, ChildInheritedCastsModel $inherited): void
 {
     assertType('bool', $model->integer);
     assertType(Stringable::class, $model->string);
@@ -33,6 +33,36 @@ function test(ModelWithCasts $model, OtherModelWithCasts $other, ConditionalMode
 
     // Optional casts() keys can override a conflicting $casts value.
     assertType('mixed', $optional->integer);
+
+    // Evaluate class constants in the model declaration, not file scope.
+    assertType('bool', $self->integer);
+    assertType('bool', $inherited->integer);
+}
+
+class SelfConstantCastsModel extends Model
+{
+    private const BOOLEAN_CAST = 'bool';
+
+    protected $table = 'model_with_casts';
+
+    protected function casts(): array
+    {
+        return ['integer' => self::BOOLEAN_CAST];
+    }
+}
+
+class BaseInheritedCastsModel extends Model
+{
+    protected $table = 'model_with_casts';
+
+    protected function casts(): array
+    {
+        return ['integer' => 'bool'];
+    }
+}
+
+class ChildInheritedCastsModel extends BaseInheritedCastsModel
+{
 }
 
 class PhpDocOptionalCastsModel extends Model

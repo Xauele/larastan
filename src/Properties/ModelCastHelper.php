@@ -416,7 +416,9 @@ class ModelCastHelper
                     // expressions retain their declared return type.
                     foreach ($method->stmts ?? [] as $bodyStatement) {
                         if ($bodyStatement instanceof Node\Stmt\Return_ && $bodyStatement->expr instanceof Array_) {
-                            $scope = $this->scopeFactory->create(ScopeContext::create($fileName));
+                            // Resolve self, parent, and $this in the method's declaring class,
+                            // not in a synthetic file-level scope.
+                            $scope = $this->scopeFactory->create(ScopeContext::create($fileName))->enterClass($declaringClass);
 
                             return $this->parsedCastsMethods[$className] = $scope->getType($bodyStatement->expr);
                         }
