@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection as SupportCollection;
 use PHPUnit\Framework\TestCase;
 
+use function array_keys;
+
 final class CollectionMultiGroupByRuntimeTest extends TestCase
 {
     public function testMultipleLevelsPreserveOriginalKeys(): void
@@ -41,15 +43,12 @@ final class CollectionMultiGroupByRuntimeTest extends TestCase
             ['department' => 'sales', 'city' => 'Wroclaw'],
         ]);
 
-        $groups = $rows->groupBy([RuntimeGroupingSelector::class, 'department']);
+        $groups = $rows->groupBy([self::class, 'department']);
 
         self::assertSame(['sales'], array_keys($groups->all()));
         self::assertSame([['department' => 'sales', 'city' => 'Wroclaw']], $groups['sales']->all());
     }
-}
 
-final class RuntimeGroupingSelector
-{
     /** @param array{department: string, city: string} $row */
     public static function department(array $row): string
     {
