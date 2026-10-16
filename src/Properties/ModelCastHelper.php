@@ -26,6 +26,7 @@ use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Stringable as IlluminateStringable;
 use PhpParser\Node;
 use PhpParser\Node\Expr\Array_;
+use PhpParser\NodeFinder;
 use PHPStan\Analyser\OutOfClassScope;
 use PHPStan\Analyser\ScopeContext;
 use PHPStan\Analyser\ScopeFactory;
@@ -59,6 +60,7 @@ use function array_key_exists;
 use function array_map;
 use function array_merge;
 use function class_exists;
+use function count;
 use function explode;
 use function str_replace;
 
@@ -351,8 +353,16 @@ class ModelCastHelper
                         continue;
                     }
 
-                    // A direct array return is safe to infer. Branch-dependent
-                    // or delegated expressions retain the declared type.
+                    // Even if the last statement returns a literal array, an
+                    // earlier branch may return different casts. Never guess.
+                    $returns = (new NodeFinder())->findInstanceOf($method->stmts ?? [], Node\Stmt\Return_::class);
+
+                    if (count($returns) !== 1) {
+                        return $this->parsedCastsMethods[$className] = new NullType();
+                    }
+
+                    // Only a direct literal return is safe to infer; delegated
+                    // expressions retain their declared return type.
                     foreach ($method->stmts ?? [] as $bodyStatement) {
                         if ($bodyStatement instanceof Node\Stmt\Return_ && $bodyStatement->expr instanceof Array_) {
                             $scope = $this->scopeFactory->create(ScopeContext::create($fileName));
