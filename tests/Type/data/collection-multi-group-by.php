@@ -102,3 +102,17 @@ function arrayCallableIsOneSelector(SupportCollection $rows): void
         $rows->groupBy([GroupingCallback::class, 'byDepartment']),
     );
 }
+
+// A class-string/method pair can be a runtime callback, even if static
+// analysis cannot prove the method exists. Never assert two grouping levels.
+/**
+ * @param SupportCollection<string, array{department: string, region: string, city: string}> $rows
+ * @param class-string $candidate
+ */
+function potentiallyCallablePair(SupportCollection $rows, string $candidate): void
+{
+    assertType(
+        'Illuminate\\Support\\Collection<(int|string), Illuminate\\Support\\Collection<int, mixed>>',
+        $rows->groupBy([$candidate, 'byDepartment']),
+    );
+}
