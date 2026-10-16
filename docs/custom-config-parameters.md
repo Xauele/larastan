@@ -119,12 +119,13 @@ incorrect errors or hiding code behind false unreachable-code diagnostics.
 
 Larastan uses the existing PHPStan parser only when the method's return type is
 not already a constant array shape and the model overrides Laravel's empty base
-`casts()` method. Parsed method types are reused for subclasses. Only a direct
-array return with literal string keys and cast values is inferred. Dynamic cast
-values do not override the model's existing `$casts` configuration with PHPStan
-pseudo-types (such as `mixed` or a union of strings). Multiple returns and other
-non-literal results fall back to the existing inference. Source parsing does not
-execute the `casts()` method.
+`casts()` method. Parsed method types are reused for subclasses. Only direct array returns are inspected. Known literal string keys and values
+are inferred precisely. An unresolved value for a known key is treated as
+`mixed`, not as a stale `$casts` property definition: Laravel's trait
+initializer merges `casts()` over `$casts`. This also supports arrays with
+both static and dynamic cast entries. Multiple returns and non-literal
+expressions retain existing inference limits; annotate those return shapes
+when possible. Source parsing never executes the `casts()` method.
 
 To disable source parsing (for example in projects using fully annotated array
 shapes or expensive custom model declarations), set:

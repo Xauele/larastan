@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Stringable;
 use function PHPStan\Testing\assertType;
 
-function test(ModelWithCasts $model, OtherModelWithCasts $other, ConditionalModelWithCasts $conditional, DynamicValueModelWithCasts $dynamic): void
+function test(ModelWithCasts $model, OtherModelWithCasts $other, ConditionalModelWithCasts $conditional, DynamicValueModelWithCasts $dynamic, PartiallyDynamicModelWithCasts $partial): void
 {
     assertType('bool', $model->integer);
     assertType(Stringable::class, $model->string);
@@ -19,8 +19,33 @@ function test(ModelWithCasts $model, OtherModelWithCasts $other, ConditionalMode
     // Conditional arrays cannot be inferred safely; retain schema types.
     assertType('int', $conditional->integer);
 
-    // A dynamic casts() entry must not erase the literal $casts property.
-    assertType('bool', $dynamic->integer);
+    // casts() overrides $casts: an unresolved override is mixed, not bool.
+    assertType('mixed', $dynamic->integer);
+    assertType('string', $dynamic->string);
+
+    // Resolve known entries independently from dynamic values.
+    assertType('mixed', $partial->integer);
+    assertType(Stringable::class, $partial->string);
+}
+
+class PartiallyDynamicModelWithCasts extends Model
+{
+    protected $table = 'model_with_casts';
+
+    protected $casts = ['integer' => 'bool'];
+
+    protected function casts(): array
+    {
+        return [
+            'integer' => $this->selectCast(),
+            'string' => AsStringable::class,
+        ];
+    }
+
+    private function selectCast(): string
+    {
+        return 'string';
+    }
 }
 
 class DynamicValueModelWithCasts extends Model

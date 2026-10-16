@@ -66,6 +66,9 @@ use function str_replace;
 
 class ModelCastHelper
 {
+    // Internal marker for known cast keys with unresolved values.
+    private const UNKNOWN_CAST = '__larastan_unknown_cast__';
+
     /** @var array<string, array<string, string>> */
     private array $modelCasts = [];
 
@@ -82,6 +85,10 @@ class ModelCastHelper
 
     public function getReadableType(string $cast, Type $originalType): Type
     {
+        if ($cast === self::UNKNOWN_CAST) {
+            return new MixedType();
+        }
+
         $cast = $this->parseCast($cast);
 
         $attributeType = match ($cast) {
@@ -142,6 +149,10 @@ class ModelCastHelper
 
     public function getWriteableType(string $cast, Type $originalType): Type
     {
+        if ($cast === self::UNKNOWN_CAST) {
+            return new MixedType();
+        }
+
         $cast = $this->parseCast($cast);
 
         $attributeType = match ($cast) {
@@ -287,10 +298,31 @@ class ModelCastHelper
         ) {
             $parsed = $this->parseCastsMethod($modelClassReflection);
 
-            // A literal array shape can still contain dynamic cast values.
-            // Never replace runtime cast names with PHPStan union/mixed types.
+            // Laravel merges casts() OVER $casts. If an array key is known
+            // but the value is dynamic, the old $casts entry is not a safe
+            // fallback. Preserve precise keys; widen uncertain ones to mixed.
             if ($this->hasLiteralCasts($parsed)) {
                 $castsMethodReturnType = $parsed;
+            } elseif ($parsed->isConstantArray()->yes()) {
+                $arrays = $parsed->getConstantArrays();
+
+                if (count($arrays) === 1 && $arrays[0]->getOptionalKeys() === []) {
+                    $keys   = $arrays[0]->getKeyTypes();
+                    $values = $arrays[0]->getValueTypes();
+
+                    foreach ($keys as $index => $key) {
+                        if (! $this->isLiteralString($key)) {
+                            continue;
+                        }
+
+                        $name  = $key->getConstantStrings()[0]->getValue();
+                        $value = $values[$index];
+
+                        $modelCasts[$name] = $this->isLiteralString($value)
+                            ? str_replace('\\\\', '\\', $value->getConstantStrings()[0]->getValue())
+                            : self::UNKNOWN_CAST;
+                    }
+                }
             }
         }
 
