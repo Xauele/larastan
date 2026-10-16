@@ -26,9 +26,11 @@ final class SingletonAttributeScopeRuleTest extends RuleTestCase
         }
 
         $this->analyse([__DIR__ . '/data/CaptiveScopeAttributes.php'], [
-            ['Singleton ScopeAttributeCompatibility\\BadDirectSingleton captures a scoped dependency: ScopeAttributeCompatibility\\BadDirectSingleton -> ScopeAttributeCompatibility\\TenantContext.', 26, 'Remove #[Singleton] or pass request-scoped information at call time instead of retaining it.'],
-            ['Singleton ScopeAttributeCompatibility\\BadIndirectSingleton captures a scoped dependency: ScopeAttributeCompatibility\\BadIndirectSingleton -> ScopeAttributeCompatibility\\Repository -> ScopeAttributeCompatibility\\TenantContext.', 34, 'Remove #[Singleton] or pass request-scoped information at call time instead of retaining it.'],
-            ['Singleton ScopeAttributeCompatibility\\BadRequestSingleton captures a scoped dependency: ScopeAttributeCompatibility\\BadRequestSingleton -> Illuminate\\Http\\Request.', 42, 'Remove #[Singleton] or pass request-scoped information at call time instead of retaining it.'],
+            ['Singleton ScopeAttributeCompatibility\\BadDirectSingleton captures a scoped dependency: ScopeAttributeCompatibility\\BadDirectSingleton -> ScopeAttributeCompatibility\\TenantContext.', 24, 'Remove #[Singleton] or pass request-scoped information at call time instead of retaining it.'],
+            ['Singleton ScopeAttributeCompatibility\\BadIndirectSingleton captures a scoped dependency: ScopeAttributeCompatibility\\BadIndirectSingleton -> ScopeAttributeCompatibility\\Repository -> ScopeAttributeCompatibility\\TenantContext.', 32, 'Remove #[Singleton] or pass request-scoped information at call time instead of retaining it.'],
+            ['Singleton ScopeAttributeCompatibility\\BadRequestSingleton captures a scoped dependency: ScopeAttributeCompatibility\\BadRequestSingleton -> Illuminate\\Http\\Request.', 40, 'Remove #[Singleton] or pass request-scoped information at call time instead of retaining it.'],
+            ['Singleton ScopeAttributeCompatibility\\InheritedRequestSingleton captures a scoped dependency: ScopeAttributeCompatibility\\InheritedRequestSingleton -> Illuminate\\Http\\Request.', 79, 'Remove #[Singleton] or pass request-scoped information at call time instead of retaining it.'],
+            ['Singleton ScopeAttributeCompatibility\\InheritedScopedSingleton captures a scoped dependency: ScopeAttributeCompatibility\\InheritedScopedSingleton -> ScopeAttributeCompatibility\\TenantContext.', 91, 'Remove #[Singleton] or pass request-scoped information at call time instead of retaining it.'],
         ]);
     }
 

@@ -6,7 +6,7 @@ namespace Larastan\Larastan\Rules\Octane;
 
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
-use PHPStan\Node\InClassMethodNode;
+use PHPStan\Node\InClassNode;
 use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleError;
 use PHPStan\Rules\RuleErrorBuilder;
@@ -16,7 +16,7 @@ use function implode;
 /**
  * Covers Laravel's attribute-first container bindings without a service provider.
  *
- * @implements Rule<InClassMethodNode>
+ * @implements Rule<InClassNode>
  */
 final class SingletonAttributeScopeRule implements Rule
 {
@@ -26,16 +26,12 @@ final class SingletonAttributeScopeRule implements Rule
 
     public function getNodeType(): string
     {
-        return InClassMethodNode::class;
+        return InClassNode::class;
     }
 
     /** @return list<RuleError> */
     public function processNode(Node $node, Scope $scope): array
     {
-        if ($node->getMethodReflection()->getName() !== '__construct') {
-            return [];
-        }
-
         $class = $node->getClassReflection();
 
         if (! $this->detector->isSingleton($class)) {
