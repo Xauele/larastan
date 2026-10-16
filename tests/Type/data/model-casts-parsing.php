@@ -21,6 +21,7 @@ function test(ModelWithCasts $model, OtherModelWithCasts $other, ConditionalMode
 
     // casts() overrides $casts: an unresolved override is mixed, not bool.
     assertType('mixed', $dynamic->integer);
+    assertType('mixed', $dynamic->toArray()['integer']);
     assertType('string', $dynamic->string);
 
     // Resolve known entries independently from dynamic values.
