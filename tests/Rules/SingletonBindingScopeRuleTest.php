@@ -54,6 +54,6 @@ final class SingletonBindingScopeRuleTest extends RuleTestCase
     /** @return list<string> */
     public static function getAdditionalConfigFiles(): array
     {
-        return [__DIR__.'/../phpstan-tests.neon'];
+        return [__DIR__ . '/../phpstan-tests.neon'];
     }
 }

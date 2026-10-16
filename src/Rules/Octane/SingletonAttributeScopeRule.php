@@ -49,7 +49,7 @@ final class SingletonAttributeScopeRule implements Rule
         }
 
         $message = 'Singleton ' . $class->getName() . ' captures a scoped dependency: ' . implode(' -> ', $path) . '.';
-        $error = RuleErrorBuilder::message($message)
+        $error   = RuleErrorBuilder::message($message)
             ->identifier('larastan.octaneCaptiveScopedDependency')
             ->tip('Remove #[Singleton] or pass request-scoped information at call time instead of retaining it.')
             ->build();
