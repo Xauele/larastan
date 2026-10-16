@@ -116,3 +116,19 @@ function potentiallyCallablePair(SupportCollection $rows, string $candidate): vo
         $rows->groupBy([$candidate, 'byDepartment']),
     );
 }
+
+/** @param SupportCollection<string, array{department: string, region: string, city: string}> $rows */
+function selectorDepthBoundary(SupportCollection $rows): void
+{
+    // MAX_GROUPS is intentionally eight. Verify the exact final boundary.
+    assertType(
+        'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<int, array{department: string, region: string, city: string}>>>>>>>>>',
+        $rows->groupBy(['department', 'region', 'city', 'department', 'region', 'city', 'department', 'region']),
+    );
+
+    // Nine selectors must keep the original Laravel/PHPStan fallback type.
+    assertType(
+        'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<int, mixed>>',
+        $rows->groupBy(['department', 'region', 'city', 'department', 'region', 'city', 'department', 'region', 'city']),
+    );
+}
