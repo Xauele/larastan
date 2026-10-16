@@ -51,6 +51,17 @@ final class SingletonBindingScopeRuleTest extends RuleTestCase
         ]);
     }
 
+    public function testDepthLimitedPathDoesNotHideShorterCaptiveDependency(): void
+    {
+        $this->analyse([__DIR__ . '/data/CaptiveScopeDiamond.php'], [
+            [
+                'Singleton ScopeCompatibilityDiamond\\Root captures a scoped dependency: ScopeCompatibilityDiamond\\Root -> ScopeCompatibilityDiamond\\ShortPath -> ScopeCompatibilityDiamond\\Shared -> ScopeCompatibilityDiamond\\Intermediate -> Illuminate\\Http\\Request.',
+                85,
+                'Register the owner as scoped(), or resolve the current context when handling each request/job.',
+            ],
+        ]);
+    }
+
     /** @return list<string> */
     public static function getAdditionalConfigFiles(): array
     {
