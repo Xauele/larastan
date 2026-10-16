@@ -37,6 +37,17 @@ final class SingletonBindingScopeRuleTest extends RuleTestCase
         ]);
     }
 
+    public function testRequestSubclassesAlsoHaveRequestLifetime(): void
+    {
+        $this->analyse([__DIR__.'/data/CaptiveScopeRequestSubclass.php'], [
+            [
+                'Singleton ScopeCompatibilityRequestSubclass\\SingletonConsumer captures a scoped dependency: ScopeCompatibilityRequestSubclass\\SingletonConsumer -> ScopeCompatibilityRequestSubclass\\CustomRequest.',
+                32,
+                'Register the owner as scoped(), or resolve the current context when handling each request/job.',
+            ],
+        ]);
+    }
+
     /** @return list<string> */
     public static function getAdditionalConfigFiles(): array
     {
