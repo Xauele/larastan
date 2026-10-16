@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Stringable;
 use function PHPStan\Testing\assertType;
 
-function test(ModelWithCasts $model, OtherModelWithCasts $other, ConditionalModelWithCasts $conditional, DynamicValueModelWithCasts $dynamic, PartiallyDynamicModelWithCasts $partial): void
+function test(ModelWithCasts $model, OtherModelWithCasts $other, ConditionalModelWithCasts $conditional, DynamicValueModelWithCasts $dynamic, PartiallyDynamicModelWithCasts $partial, PhpDocUnknownCastsModel $annotated): void
 {
     assertType('bool', $model->integer);
     assertType(Stringable::class, $model->string);
@@ -26,6 +26,25 @@ function test(ModelWithCasts $model, OtherModelWithCasts $other, ConditionalMode
     // Resolve known entries independently from dynamic values.
     assertType('mixed', $partial->integer);
     assertType(Stringable::class, $partial->string);
+
+    // A PHPDoc array shape is not necessarily a literal cast value.
+    assertType('mixed', $annotated->integer);
+}
+
+class PhpDocUnknownCastsModel extends Model
+{
+    protected $table = 'model_with_casts';
+
+    /** @return array{integer: string} */
+    protected function casts(): array
+    {
+        return ['integer' => $this->selectCast()];
+    }
+
+    private function selectCast(): string
+    {
+        return 'string';
+    }
 }
 
 class PartiallyDynamicModelWithCasts extends Model

@@ -8,7 +8,12 @@ use Illuminate\Database\Eloquent\Model;
 
 final class DynamicCastPrecedenceModel extends Model
 {
-    /** @var array<string, string> */
+    /**
+     * Laravel declares $casts without a native type, which cannot be narrowed.
+     *
+     * @var array<string, string>
+     * @phpcsSuppress SlevomatCodingStandard.TypeHints.PropertyTypeHint.MissingNativeTypeHint
+     */
     protected $casts = ['integer' => 'bool'];
 
     /** @return array<string, string> */

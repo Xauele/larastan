@@ -50,15 +50,11 @@ use PHPStan\Type\ObjectType;
 use PHPStan\Type\StringType;
 use PHPStan\Type\Type;
 use PHPStan\Type\TypeCombinator;
-use PHPStan\Type\VerbosityLevel;
 use ReflectionException;
 use stdClass;
 use Stringable;
 
-use function array_combine;
 use function array_key_exists;
-use function array_map;
-use function array_merge;
 use function class_exists;
 use function count;
 use function explode;
@@ -298,49 +294,12 @@ class ModelCastHelper
         ) {
             $parsed = $this->parseCastsMethod($modelClassReflection);
 
-            // Laravel merges casts() OVER $casts. If an array key is known
-            // but the value is dynamic, the old $casts entry is not a safe
-            // fallback. Preserve precise keys; widen uncertain ones to mixed.
-            if ($this->hasLiteralCasts($parsed)) {
+            if ($parsed->isConstantArray()->yes()) {
                 $castsMethodReturnType = $parsed;
-            } elseif ($parsed->isConstantArray()->yes()) {
-                $arrays = $parsed->getConstantArrays();
-
-                if (count($arrays) === 1 && $arrays[0]->getOptionalKeys() === []) {
-                    $keys   = $arrays[0]->getKeyTypes();
-                    $values = $arrays[0]->getValueTypes();
-
-                    foreach ($keys as $index => $key) {
-                        if (! $this->isLiteralString($key)) {
-                            continue;
-                        }
-
-                        $name  = $key->getConstantStrings()[0]->getValue();
-                        $value = $values[$index];
-
-                        $modelCasts[$name] = $this->isLiteralString($value)
-                            ? str_replace('\\\\', '\\', $value->getConstantStrings()[0]->getValue())
-                            : self::UNKNOWN_CAST;
-                    }
-                }
             }
         }
 
-        if ($castsMethodReturnType->isConstantArray()->yes()) {
-            $modelCasts = array_merge(
-                $modelCasts,
-                array_combine(
-                    array_map(static fn ($key) => $key->getValue(), $castsMethodReturnType->getKeyTypes()), // @phpstan-ignore-line
-                    array_map(static function (Type $value) {
-                        if ($value->isConstantValue()->yes()) {
-                            return str_replace('\\\\', '\\', (string) $value->getValue()); // @phpstan-ignore-line
-                        }
-
-                        return $value->describe(VerbosityLevel::value());
-                    }, $castsMethodReturnType->getValueTypes()), // @phpstan-ignore-line
-                ),
-            );
-        }
+        $modelCasts = $this->mergeCastsFromType($modelCasts, $castsMethodReturnType);
 
         $this->modelCasts[$className] = $modelCasts;
 
@@ -348,34 +307,41 @@ class ModelCastHelper
     }
 
     /**
-     * PHPStan's constant-array type guarantees the shape, not the values.
-     * Cast names must be literal strings before they can override getCasts().
+     * Preserve exact casts and widen unresolved values for a known key.
+     * This applies equally to parsed bodies and declared PHPDoc array shapes.
+     *
+     * @param array<string, string> $modelCasts
+     * @return array<string, string>
      */
-    private function hasLiteralCasts(Type $type): bool
+    private function mergeCastsFromType(array $modelCasts, Type $type): array
     {
         if (! $type->isConstantArray()->yes()) {
-            return false;
+            return $modelCasts;
         }
 
         $arrays = $type->getConstantArrays();
 
         if (count($arrays) !== 1 || $arrays[0]->getOptionalKeys() !== []) {
-            return false;
+            return $modelCasts;
         }
 
-        foreach ($arrays[0]->getKeyTypes() as $key) {
+        $keys   = $arrays[0]->getKeyTypes();
+        $values = $arrays[0]->getValueTypes();
+
+        foreach ($keys as $index => $key) {
             if (! $this->isLiteralString($key)) {
-                return false;
+                continue;
             }
+
+            $name  = $key->getConstantStrings()[0]->getValue();
+            $value = $values[$index];
+
+            $modelCasts[$name] = $this->isLiteralString($value)
+                ? str_replace('\\\\', '\\', $value->getConstantStrings()[0]->getValue())
+                : self::UNKNOWN_CAST;
         }
 
-        foreach ($arrays[0]->getValueTypes() as $value) {
-            if (! $this->isLiteralString($value)) {
-                return false;
-            }
-        }
-
-        return true;
+        return $modelCasts;
     }
 
     private function isLiteralString(Type $type): bool
