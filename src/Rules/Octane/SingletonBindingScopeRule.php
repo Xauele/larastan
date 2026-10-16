@@ -43,7 +43,7 @@ final class SingletonBindingScopeRule implements Rule
     /** @return list<RuleError> */
     public function processNode(Node $node, Scope $scope): array
     {
-        if (! $node instanceof MethodCall || ! $node->name instanceof Node\Identifier || $node->isFirstClassCallable()) {
+        if (! $node->name instanceof Node\Identifier || $node->isFirstClassCallable()) {
             return [];
         }
 

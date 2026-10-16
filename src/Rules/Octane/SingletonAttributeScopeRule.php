@@ -32,13 +32,13 @@ final class SingletonAttributeScopeRule implements Rule
     /** @return list<RuleError> */
     public function processNode(Node $node, Scope $scope): array
     {
-        if (! $node instanceof InClassMethodNode || $node->getMethodReflection()->getName() !== '__construct') {
+        if ($node->getMethodReflection()->getName() !== '__construct') {
             return [];
         }
 
         $class = $node->getClassReflection();
 
-        if ($class === null || ! $this->detector->isSingleton($class)) {
+        if (! $this->detector->isSingleton($class)) {
             return [];
         }
 
