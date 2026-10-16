@@ -267,8 +267,10 @@ mapped non-model values into Support collections.
 
 Dynamic selector lists, optional array keys, one selector, more than eight
 selectors, and custom collection subclasses continue to use the existing
-Laravel/PHPStan return types. This avoids guessing types where the grouping
-depth or runtime collection implementation is not statically known.
+Laravel/PHPStan return types. Two-element callable arrays such as
+`[Callback::class, 'method']` also keep the framework type: Laravel treats them
+as **one callback**, not two grouping levels. This avoids guessing types where
+the grouping depth or runtime collection implementation is not statically known.
 
 ## Model Properties
 
