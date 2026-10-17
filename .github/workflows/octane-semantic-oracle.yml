@@ -52,4 +52,4 @@ jobs:
             cat octane-oracle.json
             exit "$rc"
           fi
-          python3 tests/Rules/scripts/compare_octane_oracle.py octane-oracle.json
+          python3 tests/Rules/scripts/compare_octane_oracle.py octane-oracle.json "${{ matrix.laravel }}"
