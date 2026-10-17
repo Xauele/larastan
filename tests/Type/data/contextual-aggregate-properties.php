@@ -53,8 +53,8 @@ function customBuilderAndCollection(): void
     assertType('bool', $post->comments_exists);
 
     $users = User::query()->withExists('posts')->get();
-    assertType('PROBE_GET_TYPE', $users);
-    assertType('PROBE_FIRST_TYPE', $users->firstOrFail());
+    assertType('Illuminate\\Database\\Eloquent\\Collection<int, App\\User&object{posts_exists: bool}>', $users);
+    assertType('App\\User&object{posts_exists: bool}', $users->firstOrFail());
     assertType('bool', $users->firstOrFail()->posts_exists);
 }
 

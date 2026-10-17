@@ -66,7 +66,7 @@ final class EloquentAggregateResultTypeExtension implements DynamicMethodReturnT
 
     public function isMethodSupported(MethodReflection $methodReflection): bool
     {
-        return in_array($methodReflection->getName(), ['first', 'firstOrFail', 'sole', 'get'], true);
+        return in_array($methodReflection->getName(), ['first', 'firstOrFail', 'sole'], true);
     }
 
     public function getTypeFromMethodCall(MethodReflection $methodReflection, MethodCall $methodCall, Scope $scope): Type|null
