@@ -18,6 +18,7 @@ use PHPStan\Type\FloatType;
 use PHPStan\Type\Generic\GenericObjectType;
 use PHPStan\Type\IntegerRangeType;
 use PHPStan\Type\IntegerType;
+use PHPStan\Type\IntersectionType;
 use PHPStan\Type\NullType;
 use PHPStan\Type\ObjectShapeType;
 use PHPStan\Type\ObjectType;
@@ -26,6 +27,7 @@ use PHPStan\Type\Type;
 use PHPStan\Type\TypeCombinator;
 
 use function array_key_exists;
+use function array_merge;
 use function count;
 use function explode;
 use function in_array;
@@ -183,7 +185,35 @@ final class EloquentAggregateModelPropertiesExtension implements DynamicMethodRe
             return null;
         }
 
-        $enriched = TypeCombinator::intersect($modelType, new ObjectShapeType($properties, []));
+        // PHPStan cannot usefully intersect two unrelated object shapes.
+        // Merge previously selected columns into a single shape before adding
+        // the next aggregate to the same builder.
+        $baseModel          = $modelType;
+        $existingProperties = [];
+        $optionalProperties = [];
+
+        if ($modelType instanceof IntersectionType) {
+            $parts = [];
+
+            foreach ($modelType->getTypes() as $part) {
+                if (! $part instanceof ObjectShapeType) {
+                    $parts[] = $part;
+                    continue;
+                }
+
+                $existingProperties = array_merge($existingProperties, $part->getProperties());
+                $optionalProperties = array_merge($optionalProperties, $part->getOptionalProperties());
+            }
+
+            if ($parts !== []) {
+                $baseModel = TypeCombinator::intersect(...$parts);
+            }
+        }
+
+        $enriched = TypeCombinator::intersect($baseModel, new ObjectShapeType(
+            array_merge($existingProperties, $properties),
+            $optionalProperties,
+        ));
 
         return new GenericObjectType(
             $builderReflection->getName(),
