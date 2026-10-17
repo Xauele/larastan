@@ -9,9 +9,11 @@ use PHPStan\Reflection\ClassReflection;
 use PHPStan\Type\TypeCombinator;
 use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 
+use function class_exists;
 use function count;
 use function str_contains;
 use function str_replace;
+use function strcasecmp;
 
 /**
  * Conservative counterpart to .NET DI scope validation.
@@ -143,8 +145,15 @@ final class ScopedDependencyDetector
 
     private function hasAttribute(ClassReflection $class, string $attribute): bool
     {
+        // Match native Laravel lifetime policy: missing attribute classes on
+        // Laravel 11 are not active attributes, and PHP Reflection resolves
+        // case variants and use-aliases with its getAttributes() and a case-insensitive name comparison.
+        if (! class_exists($attribute)) {
+            return false;
+        }
+
         foreach ($class->getNativeReflection()->getAttributes() as $reflectionAttribute) {
-            if ($reflectionAttribute->getName() === $attribute) {
+            if (strcasecmp($reflectionAttribute->getName(), $attribute) === 0) {
                 return true;
             }
         }

@@ -26,6 +26,7 @@ final class OctaneAdversarialBindingRuleTest extends RuleTestCase
             ['Singleton OctaneAdversarialNativeCases\\SharedViaNamedBind has a constructor dependency on a scoped service: OctaneAdversarialNativeCases\\SharedViaNamedBind -> Illuminate\\Http\\Request.', 85, $tip],
             ['Singleton OctaneAdversarialNativeCases\\SharedImplementation has a constructor dependency on a scoped service: OctaneAdversarialNativeCases\\SharedImplementation -> Illuminate\\Http\\Request.', 84, $tip],
             ['Singleton OctaneAdversarialNativeCases\\BaselineExplicitSingleton has a constructor dependency on a scoped service: OctaneAdversarialNativeCases\\BaselineExplicitSingleton -> Illuminate\\Http\\Request.', 89, $tip],
+            ['Singleton OctaneAdversarialNativeCases\\SharedViaBindIf has a constructor dependency on a scoped service: OctaneAdversarialNativeCases\\SharedViaBindIf -> Illuminate\\Http\\Request.', 90, $tip],
         ]);
     }
 

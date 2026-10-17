@@ -87,4 +87,12 @@ function registerBindings(Container $app): void
     $app->bind(TransientViaDefaultBind::class);
     $app->bind(TransientViaExplicitFalseBind::class, shared: false);
     $app->singleton(BaselineExplicitSingleton::class);
+    $app->bindIf(SharedViaBindIf::class, null, true);
+}
+
+final class SharedViaBindIf
+{
+    public function __construct(public Request $request)
+    {
+    }
 }

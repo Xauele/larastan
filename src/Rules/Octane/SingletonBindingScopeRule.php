@@ -47,7 +47,16 @@ final class SingletonBindingScopeRule implements Rule
             return [];
         }
 
-        if (! in_array(strtolower($node->name->name), ['singleton', 'singletonif'], true)) {
+        $registrationMethod = strtolower($node->name->name);
+
+        if (! in_array($registrationMethod, ['singleton', 'singletonif', 'bind', 'bindif'], true)) {
+            return [];
+        }
+
+        // bind() / bindIf() share the same singleton lifetime only when
+        // their third argument is a definite literal true. A dynamic flag
+        // is deliberately not inferred as true.
+        if (in_array($registrationMethod, ['bind', 'bindif'], true) && ! $this->isExplicitlyShared($node->getArgs())) {
             return [];
         }
 
@@ -82,6 +91,31 @@ final class SingletonBindingScopeRule implements Rule
             ->build();
 
         return [$error];
+    }
+
+    /**
+     * Analyze positional or named 'shared' without executing any user code.
+     *
+     * @param array<int, Arg> $args
+     */
+    private function isExplicitlyShared(array $args): bool
+    {
+        $shared = null;
+
+        foreach ($args as $index => $arg) {
+            if ($arg->unpack) {
+                return false;
+            }
+
+            if ($arg->name?->name !== 'shared' && ($arg->name !== null || $index !== 2)) {
+                continue;
+            }
+
+            $shared = $arg->value;
+        }
+
+        return $shared instanceof Node\Expr\ConstFetch
+            && strtolower($shared->name->toString()) === 'true';
     }
 
     /**
