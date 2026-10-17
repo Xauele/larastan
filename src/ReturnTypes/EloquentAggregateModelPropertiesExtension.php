@@ -29,6 +29,7 @@ use function array_key_exists;
 use function count;
 use function explode;
 use function in_array;
+use function is_int;
 use function preg_replace;
 use function sprintf;
 use function strtolower;
@@ -65,13 +66,16 @@ final class EloquentAggregateModelPropertiesExtension implements DynamicMethodRe
     {
         $receiverType = $scope->getType($methodCall->var);
 
-        // Reconstruct only known single-parameter generic builders. This preserves
-        // the exact custom builder subclass and all prior model intersections.
-        if (! $receiverType instanceof GenericObjectType || count($receiverType->getTypes()) !== 1) {
+        // Query the type API rather than inspecting a concrete GenericObjectType:
+        // intersections with accessories remain valid after earlier aggregates.
+        $reflections = $receiverType->getObjectClassReflections();
+
+        if (count($reflections) !== 1 || ! $reflections[0]->is(Builder::class) || $reflections[0]->getActiveTemplateTypeMap()->count() !== 1) {
             return null;
         }
 
-        $modelType = $receiverType->getTemplateType(Builder::class, 'TModel');
+        $builderReflection = $reflections[0];
+        $modelType         = $receiverType->getTemplateType(Builder::class, 'TModel');
 
         if (! (new ObjectType(Model::class))->isSuperTypeOf($modelType)->yes()) {
             return null;
@@ -152,11 +156,17 @@ final class EloquentAggregateModelPropertiesExtension implements DynamicMethodRe
                 continue;
             }
 
-            $property = $alias ?? Str::snake(preg_replace(
+            $defaultName = preg_replace(
                 '/[^[:alnum:][:space:]_]/u',
                 '',
                 sprintf('%s %s %s', $name, $operation, strtolower($column)),
-            ));
+            );
+
+            if ($defaultName === null) {
+                continue;
+            }
+
+            $property = $alias ?? Str::snake($defaultName);
 
             if ($property === '') {
                 continue;
@@ -176,17 +186,15 @@ final class EloquentAggregateModelPropertiesExtension implements DynamicMethodRe
         $enriched = TypeCombinator::intersect($modelType, new ObjectShapeType($properties, []));
 
         return new GenericObjectType(
-            $receiverType->getClassName(),
+            $builderReflection->getName(),
             [$enriched],
             null,
             null,
-            $receiverType->getVariances(),
+            [],
         );
     }
 
-    /**
-     * @return list<string>|null
-     */
+    /** @return list<string>|null */
     private function constantRelationNames(Type $relations): array|null
     {
         $strings = $relations->getConstantStrings();
@@ -205,7 +213,7 @@ final class EloquentAggregateModelPropertiesExtension implements DynamicMethodRe
         $values = $arrays[0]->getValueTypes();
 
         foreach ($arrays[0]->getKeyTypes() as $index => $key) {
-            $nameType = $key->isString()->yes() ? $key : $values[$index];
+            $nameType  = $key->isString()->yes() ? $key : $values[$index];
             $constants = $nameType->getConstantStrings();
 
             if (count($constants) !== 1) {
