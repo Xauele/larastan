@@ -38,3 +38,25 @@ function register(Container $app): void
     // because of the native #[Singleton] attribute.
     $app->bind(FactoryRoot::class, static fn (): SafeFactoryRoot => new SafeFactoryRoot());
 }
+
+#[Singleton]
+class ClassMappedRoot
+{
+    public function __construct(public Request $request)
+    {
+    }
+}
+
+final class SafeMappedRoot extends ClassMappedRoot
+{
+    public function __construct()
+    {
+    }
+}
+
+function registerMapped(Container $app): void
+{
+    // No factory here: a statically known explicit class-to-class binding
+    // also supersedes the declared root constructor.
+    $app->bind(ClassMappedRoot::class, SafeMappedRoot::class);
+}
