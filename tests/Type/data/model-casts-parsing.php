@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Stringable;
 use function PHPStan\Testing\assertType;
 
-function test(ModelWithCasts $model, OtherModelWithCasts $other, ConditionalModelWithCasts $conditional, DynamicValueModelWithCasts $dynamic, PartiallyDynamicModelWithCasts $partial, PhpDocUnknownCastsModel $annotated, PhpDocOptionalCastsModel $optional, SelfConstantCastsModel $self, ChildInheritedCastsModel $inherited, LateStaticOverrideCastsModel $lateBound, DynamicKeyCastsModel $dynamicKey, TimestampStringCastsModel $timestamp, CastedKeyWithoutSchemaModel $keyed): void
+function test(ModelWithCasts $model, OtherModelWithCasts $other, ConditionalModelWithCasts $conditional, DynamicValueModelWithCasts $dynamic, PartiallyDynamicModelWithCasts $partial, PhpDocUnknownCastsModel $annotated, PhpDocOptionalCastsModel $optional, SelfConstantCastsModel $self, ChildInheritedCastsModel $inherited, TraitBoolCastModel $traitBool, TraitStringCastModel $traitString, TraitInheritedCastModel $traitInherited, LateStaticOverrideCastsModel $lateBound, DynamicKeyCastsModel $dynamicKey, TimestampStringCastsModel $timestamp, CastedKeyWithoutSchemaModel $keyed): void
 {
     assertType('bool', $model->integer);
     assertType(Stringable::class, $model->string);
@@ -37,6 +37,12 @@ function test(ModelWithCasts $model, OtherModelWithCasts $other, ConditionalMode
     // Evaluate class constants in the model declaration, not file scope.
     assertType('bool', $self->integer);
     assertType('bool', $inherited->integer);
+
+    // A model may import casts() through a trait. The same trait method
+    // must resolve self:: against each consuming model, not the trait.
+    assertType('bool', $traitBool->integer);
+    assertType('string', $traitString->integer);
+    assertType('bool', $traitInherited->integer);
 
     // static:: may resolve to a different cast in an inherited subclass.
     assertType('mixed', $lateBound->integer);
@@ -117,6 +123,36 @@ class LateStaticBaseCastsModel extends Model
 class LateStaticOverrideCastsModel extends LateStaticBaseCastsModel
 {
     protected const CAST = 'string';
+}
+
+trait CastsViaTrait
+{
+    protected function casts(): array
+    {
+        return ['integer' => self::MODEL_CAST];
+    }
+}
+
+class TraitBoolCastModel extends Model
+{
+    use CastsViaTrait;
+
+    protected const MODEL_CAST = 'bool';
+
+    protected $table = 'model_with_casts';
+}
+
+class TraitStringCastModel extends Model
+{
+    use CastsViaTrait;
+
+    protected const MODEL_CAST = 'string';
+
+    protected $table = 'model_with_casts';
+}
+
+class TraitInheritedCastModel extends TraitBoolCastModel
+{
 }
 
 class BaseInheritedCastsModel extends Model
