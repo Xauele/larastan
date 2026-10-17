@@ -1,0 +1,54 @@
+name: Octane native semantic development gate
+
+on:
+  push:
+    branches:
+      - fix/octane-lifetime-semantic-integrity-20261018
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: octane-semantic-dev
+  cancel-in-progress: true
+
+jobs:
+  native-oracle:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - php: '8.3'
+            laravel: '^11.44.2'
+          - php: '8.4'
+            laravel: '^12.7.2'
+          - php: '8.5'
+            laravel: '^13.0'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    name: Native oracle PHP ${{ matrix.php }} Laravel ${{ matrix.laravel }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: dom, curl, libxml, mbstring, zip, fileinfo
+          tools: composer:v2
+          coverage: none
+      - name: Validate syntax
+        run: |
+          php -l tests/Rules/data/OctaneSemanticRoots.php
+          php -l tests/Rules/data/OctaneSemanticShared.php
+          php -l tests/Rules/OctaneBindingSemanticRuleTest.php
+          php -l tests/Rules/OctaneBindingSemanticRuntimeTest.php
+      - name: Install exact Laravel line
+        run: composer update --with="laravel/framework:${{ matrix.laravel }}" --no-interaction --no-progress
+      - name: Runtime verification with real Laravel Container
+        run: ./vendor/bin/phpunit tests/Rules/OctaneBindingSemanticRuntimeTest.php --colors=never
+      - name: PHPStan collector/diagnostic validation in full PHPUnit suite
+        run: composer run-script test:unit
+      - name: Static analysis
+        run: composer run-script test:types
+      - name: Coding standards
+        run: composer run-script test:cs
