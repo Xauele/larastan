@@ -62,6 +62,21 @@ final class SingletonBindingScopeRuleTest extends RuleTestCase
         $this->analyse([__DIR__ . '/data/CaptiveScopeRequestSubclass.php'], []);
     }
 
+    public function testExplicitlyScopedRequestSubclassStillReportsCaptiveDependency(): void
+    {
+        if (! class_exists('Illuminate\\Container\\Attributes\\Scoped')) {
+            self::markTestSkipped('Native lifetime attributes are not available in Laravel 11.');
+        }
+
+        $this->analyse([__DIR__ . '/data/CaptiveScopeExplicitScopedRequestSubclass.php'], [
+            [
+                'Singleton ScopeCompatibilityRequestSubclassScoped\\CaptiveSingleton has a constructor dependency on a scoped service: ScopeCompatibilityRequestSubclassScoped\\CaptiveSingleton -> ScopeCompatibilityRequestSubclassScoped\\ExplicitScopedRequest.',
+                25,
+                'Register the owner as scoped(), or resolve the current context when handling each request/job.',
+            ],
+        ]);
+    }
+
     public function testDepthLimitedPathDoesNotHideShorterCaptiveDependency(): void
     {
         $this->analyse([__DIR__ . '/data/CaptiveScopeDiamond.php'], [
