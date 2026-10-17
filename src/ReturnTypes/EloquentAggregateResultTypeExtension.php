@@ -118,11 +118,13 @@ final class EloquentAggregateResultTypeExtension implements DynamicMethodReturnT
         };
     }
 
-    /**
-     * @return array<string, Type>
-     */
+    /** @return array<string, Type> */
     private function resolveAggregateProperties(MethodCall|StaticCall $call, Type $modelType, Scope $scope): array
     {
+        if (! $call->name instanceof Identifier) {
+            return [];
+        }
+
         $arguments = [];
 
         foreach ($call->getArgs() as $position => $argument) {
