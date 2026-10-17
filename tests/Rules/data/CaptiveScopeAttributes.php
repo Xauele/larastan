@@ -67,3 +67,36 @@ final class SafeScopedOwner
     {
     }
 }
+
+class ParentWithRequestDependency
+{
+    public function __construct(Request $request)
+    {
+    }
+}
+
+#[Singleton]
+final class InheritedRequestSingleton extends ParentWithRequestDependency
+{
+}
+
+class ParentWithScopedDependency
+{
+    public function __construct(TenantContext $tenant)
+    {
+    }
+}
+
+#[Singleton]
+final class InheritedScopedSingleton extends ParentWithScopedDependency
+{
+}
+
+#[Singleton]
+final class ConstructorlessSingleton
+{
+}
+
+final class OrdinaryRequestChild extends ParentWithRequestDependency
+{
+}

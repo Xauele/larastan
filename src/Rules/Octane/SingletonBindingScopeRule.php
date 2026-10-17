@@ -43,7 +43,7 @@ final class SingletonBindingScopeRule implements Rule
     /** @return list<RuleError> */
     public function processNode(Node $node, Scope $scope): array
     {
-        if (! $node instanceof MethodCall || ! $node->name instanceof Node\Identifier || $node->isFirstClassCallable()) {
+        if (! $node->name instanceof Node\Identifier || $node->isFirstClassCallable()) {
             return [];
         }
 
@@ -75,10 +75,13 @@ final class SingletonBindingScopeRule implements Rule
             return [];
         }
 
-        return [RuleErrorBuilder::message('Singleton '.$class->getName().' captures a scoped dependency: '.implode(' -> ', $path).'.')
+        $message = 'Singleton ' . $class->getName() . ' has a constructor dependency on a scoped service: ' . implode(' -> ', $path) . '.';
+        $error   = RuleErrorBuilder::message($message)
             ->identifier('larastan.octaneCaptiveScopedDependency')
             ->tip('Register the owner as scoped(), or resolve the current context when handling each request/job.')
-            ->build()];
+            ->build();
+
+        return [$error];
     }
 
     /**
