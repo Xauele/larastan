@@ -29,10 +29,10 @@ definitely_captive = {
     "OptionalBoundConsumer",
     "InterfaceOnlyOwner",
     "BaselineNativeSingleton",
+    "AttributeOwnerOverriddenToTransient",
 }
 definitely_not_captive_under_selected_binding = {
     "OwnerWithExplicitlySharedDependency",
-    "AttributeOwnerOverriddenToTransient",
     "BaselineTransient",
 }
 # Expected by the documented conservative rule, even though it never
