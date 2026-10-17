@@ -20,6 +20,7 @@ use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
 use function class_exists;
+use function OctaneAdversarialNativeCases\registerBindings;
 
 final class OctaneAdversarialRuntimeOracleTest extends TestCase
 {
@@ -37,8 +38,8 @@ final class OctaneAdversarialRuntimeOracleTest extends TestCase
         $previous = Container::getInstance();
 
         try {
-            $app = new Application();
-            $scopedOne = $app->make(MixedCaseScopedContext::class);
+            $app          = new Application();
+            $scopedOne    = $app->make(MixedCaseScopedContext::class);
             $singletonOne = $app->make(MixedCaseSingleton::class);
 
             self::assertSame($scopedOne, $singletonOne->context);
@@ -60,16 +61,16 @@ final class OctaneAdversarialRuntimeOracleTest extends TestCase
         $previous = Container::getInstance();
 
         try {
-            $app = new Application();
+            $app      = new Application();
             $requestA = Request::create('/tenant-a');
             $requestB = Request::create('/tenant-b');
             $app->instance('request', $requestA);
-            \OctaneAdversarialNativeCases\registerBindings($app);
+            registerBindings($app);
 
             $positional = $app->make(SharedViaPositionalBind::class);
-            $named = $app->make(SharedViaNamedBind::class);
-            $contract = $app->make(SharedContract::class);
-            $transient = $app->make(TransientViaDefaultBind::class);
+            $named      = $app->make(SharedViaNamedBind::class);
+            $contract   = $app->make(SharedContract::class);
+            $transient  = $app->make(TransientViaDefaultBind::class);
 
             self::assertSame($requestA, $positional->request);
             self::assertSame($requestA, $named->request);
