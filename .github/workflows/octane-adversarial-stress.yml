@@ -1,0 +1,101 @@
+---
+name: Octane pathological graph stress
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  graph-stress:
+    name: "5000 repeated registrations / deep chains / cycles"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: "dom, curl, libxml, mbstring, zip, fileinfo"
+          tools: "composer:v2"
+          coverage: none
+      - name: Install Laravel 12
+        run: composer update --with="laravel/framework:^12.0" --no-interaction --no-progress
+      - name: Generate deterministic pathological fixture (no committed generated files)
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path("tests/Rules/data/OctaneStressGenerated.php")
+          lines = [
+              "<?php", "declare(strict_types=1);",
+              "namespace OctaneStress;",
+              "use Illuminate\\Contracts\\Container\\Container;",
+              "use Illuminate\\Http\\Request;",
+          ]
+          def chain(name, count, leaf):
+              for depth in range(count, 0, -1):
+                  next_type = leaf if depth == count else f"{name}{depth + 1}"
+                  lines.append(f"final class {name}{depth} {{ public function __construct(public {next_type} $next) {{}} }}")
+              lines.append(f"final class {name}Root {{ public function __construct(public {name}1 $next) {{}} }}")
+          chain("Safe", 6, "\\stdClass")
+          chain("Captive", 6, "Request")
+          chain("OutOfDepth", 8, "Request")
+          lines.extend([
+              "final class CycleA { public function __construct(public CycleB $next) {} }",
+              "final class CycleB { public function __construct(public CycleA $next) {} }",
+              "function registerStress(Container $app): void {"
+          ])
+          for cls, num in [("SafeRoot", 1600), ("CaptiveRoot", 1600), ("CycleA", 1000), ("OutOfDepthRoot", 800)]:
+              lines.extend(f"    $app->singleton({cls}::class);" for _ in range(num))
+          lines.append("}")
+          path.write_text("\n".join(lines) + "\n")
+          print("Generated", len(lines), "PHP lines with 5000 registrations")
+          PY
+          php -l tests/Rules/data/OctaneStressGenerated.php
+      - name: Build opt-in A/B configurations
+        shell: bash
+        run: |
+          for mode in off on; do
+            if [ "$mode" = on ]; then enabled=true; else enabled=false; fi
+            cat > "tests/octane-stress-$mode.neon" <<EOF
+          includes:
+            - phpstan-tests.neon
+          parameters:
+            level: 0
+            paths:
+              - Rules/data/OctaneStressGenerated.php
+            checkOctaneCompatibility: $enabled
+          EOF
+          done
+      - name: Repeated cold no-cache stress A/B, 3 trials each
+        shell: bash
+        run: |
+          set -uo pipefail
+          echo "| mode | trial | exit | warning matches | time seconds | max RSS kB |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---:|---:|---:|---:|---:|" >> "$GITHUB_STEP_SUMMARY"
+          for trial in 1 2 3; do
+            for mode in off on; do
+              /usr/bin/time -f '%e %M' -o "stress-$mode-$trial.metrics" ./vendor/bin/phpstan analyse --debug --no-progress --memory-limit=3G -c "tests/octane-stress-$mode.neon" > "stress-$mode-$trial.output" 2>&1
+              rc=$?
+              read -r seconds rss < "stress-$mode-$trial.metrics"
+              count=$(grep -c 'has a constructor dependency on a scoped service' "stress-$mode-$trial.output" || :)
+              echo "STRESS_CSV $mode,$trial,$rc,$count,$seconds,$rss"
+              echo "| $mode | $trial | $rc | $count | $seconds | $rss |" >> "$GITHUB_STEP_SUMMARY"
+              tail -n 5 "stress-$mode-$trial.output"
+              if [ "$mode" = off ] && [ "$rc" -ne 0 ]; then
+                echo "OFF control is not clean" >&2
+                exit 1
+              fi
+              if [ "$mode" = on ] && [ "$rc" -ne 1 ]; then
+                echo "ON expected diagnostic exit 1 but got $rc" >&2
+                exit 1
+              fi
+              if [ "$mode" = on ] && [ "$count" -ne 1600 ]; then
+                echo "Expected 1600 captive scoped diagnostics; saw $count" >&2
+                exit 1
+              fi
+            done
+          done
