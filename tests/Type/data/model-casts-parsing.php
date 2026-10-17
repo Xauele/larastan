@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Stringable;
 use function PHPStan\Testing\assertType;
 
-function test(ModelWithCasts $model, OtherModelWithCasts $other, ConditionalModelWithCasts $conditional, DynamicValueModelWithCasts $dynamic, PartiallyDynamicModelWithCasts $partial, PhpDocUnknownCastsModel $annotated, PhpDocOptionalCastsModel $optional, SelfConstantCastsModel $self, ChildInheritedCastsModel $inherited, TraitBoolCastModel $traitBool, TraitStringCastModel $traitString, TraitInheritedCastModel $traitInherited, LateStaticOverrideCastsModel $lateBound, DynamicKeyCastsModel $dynamicKey, TimestampStringCastsModel $timestamp, CastedKeyWithoutSchemaModel $keyed): void
+function test(ModelWithCasts $model, OtherModelWithCasts $other, ConditionalModelWithCasts $conditional, DynamicValueModelWithCasts $dynamic, PartiallyDynamicModelWithCasts $partial, PhpDocUnknownCastsModel $annotated, PhpDocOptionalCastsModel $optional, SelfConstantCastsModel $self, ChildInheritedCastsModel $inherited, TraitBoolCastModel $traitBool, TraitStringCastModel $traitString, TraitInheritedCastModel $traitInherited, ExternalTraitCastModel $externalTrait, LateStaticOverrideCastsModel $lateBound, DynamicKeyCastsModel $dynamicKey, TimestampStringCastsModel $timestamp, CastedKeyWithoutSchemaModel $keyed): void
 {
     assertType('bool', $model->integer);
     assertType(Stringable::class, $model->string);
@@ -43,6 +43,8 @@ function test(ModelWithCasts $model, OtherModelWithCasts $other, ConditionalMode
     assertType('bool', $traitBool->integer);
     assertType('string', $traitString->integer);
     assertType('bool', $traitInherited->integer);
+    assertType('bool', $externalTrait->integer);
+    assertType(Stringable::class, $externalTrait->string);
 
     // static:: may resolve to a different cast in an inherited subclass.
     assertType('mixed', $lateBound->integer);
@@ -153,6 +155,13 @@ class TraitStringCastModel extends Model
 
 class TraitInheritedCastModel extends TraitBoolCastModel
 {
+}
+
+class ExternalTraitCastModel extends Model
+{
+    use External\ExternalModelCastsTrait;
+
+    protected $table = 'model_with_casts';
 }
 
 class BaseInheritedCastsModel extends Model
