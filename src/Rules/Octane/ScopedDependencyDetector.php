@@ -119,6 +119,15 @@ final class ScopedDependencyDetector
                     return [...$path, $dependencyName];
                 }
 
+                // A factory or supplied instance may return a completely different
+                // implementation. Only constructor-autowired concrete classes can
+                // be followed; the abstract's constructor proves nothing here.
+                // Keep the lifetime check above: scoped() with a factory still
+                // creates a request/job-scoped service.
+                if ($binding !== null && $binding['concrete'] === null) {
+                    continue;
+                }
+
                 $target   = $dependency;
                 $nextPath = [...$path, $dependencyName];
 
