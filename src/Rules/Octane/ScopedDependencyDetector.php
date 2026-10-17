@@ -12,9 +12,9 @@ use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 
 use function array_slice;
 use function count;
-use function strcasecmp;
 use function str_contains;
 use function str_replace;
+use function strcasecmp;
 
 /**
  * Conservative counterpart to .NET DI scope validation.
@@ -87,7 +87,7 @@ final class ScopedDependencyDetector
                 return null;
             }
 
-            $path[] = $current->getName();
+            $path[]                    = $current->getName();
             $seen[$current->getName()] = true;
 
             // Laravel resolves distinct concretes via Container::resolve();

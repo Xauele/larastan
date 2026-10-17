@@ -27,6 +27,7 @@ use OctaneSemanticShared\TransientExplicit;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
 
+use function class_exists;
 use function OctaneSemanticRoots\register as registerRoots;
 use function OctaneSemanticShared\register as registerShared;
 
@@ -43,15 +44,15 @@ final class OctaneBindingSemanticRuntimeTest extends TestCase
         $previous = Container::getInstance();
 
         try {
-            $app = new Application();
+            $app          = new Application();
             $firstRequest = Request::create('/first');
             $app->instance('request', $firstRequest);
             registerRoots($app);
 
-            $factory = $app->make(RootFactory::class);
-            $mapped  = $app->make(RootMapped::class);
-            $actual  = $app->make(RootMappedCaptive::class);
-            $scoped  = $app->make(RootToScoped::class);
+            $factory  = $app->make(RootFactory::class);
+            $mapped   = $app->make(RootMapped::class);
+            $actual   = $app->make(RootMappedCaptive::class);
+            $scoped   = $app->make(RootToScoped::class);
             $instance = $app->make(RootInstance::class);
             $rootSelf = $app->make(RootSelf::class);
 
@@ -88,16 +89,16 @@ final class OctaneBindingSemanticRuntimeTest extends TestCase
         $previous = Container::getInstance();
 
         try {
-            $app = new Application();
+            $app          = new Application();
             $firstRequest = Request::create('/first');
             $app->instance('request', $firstRequest);
             registerShared($app);
 
-            $named = $app->make(NamedShared::class);
-            $positional = $app->make(PositionalShared::class);
+            $named       = $app->make(NamedShared::class);
+            $positional  = $app->make(PositionalShared::class);
             $conditional = $app->make(SharedViaBindIf::class);
-            $transient = $app->make(TransientDefault::class);
-            $explicit = $app->make(TransientExplicit::class);
+            $transient   = $app->make(TransientDefault::class);
+            $explicit    = $app->make(TransientExplicit::class);
 
             $app->instance('request', Request::create('/second'));
             $app->forgetScopedInstances();
