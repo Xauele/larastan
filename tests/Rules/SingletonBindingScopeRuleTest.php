@@ -55,15 +55,11 @@ final class SingletonBindingScopeRuleTest extends RuleTestCase
         ]);
     }
 
-    public function testRequestSubclassesAlsoHaveRequestLifetime(): void
+    public function testUnboundRequestSubclassIsNotTheActiveRequestAlias(): void
     {
-        $this->analyse([__DIR__ . '/data/CaptiveScopeRequestSubclass.php'], [
-            [
-                'Singleton ScopeCompatibilityRequestSubclass\\SingletonConsumer has a constructor dependency on a scoped service: ScopeCompatibilityRequestSubclass\\SingletonConsumer -> ScopeCompatibilityRequestSubclass\\CustomRequest.',
-                32,
-                'Register the owner as scoped(), or resolve the current context when handling each request/job.',
-            ],
-        ]);
+        // Laravel aliases only the exact Request base classes to 'request'.
+        // A custom subclass is a transient autowiring target unless bound.
+        $this->analyse([__DIR__ . '/data/CaptiveScopeRequestSubclass.php'], []);
     }
 
     public function testDepthLimitedPathDoesNotHideShorterCaptiveDependency(): void
