@@ -256,6 +256,61 @@ Will result in the following error:
 
 `Consider using bind method instead or pass a closure.`
 
+### Captive scoped dependencies (Octane / long-running queue workers)
+
+With the same opt-in `checkOctaneCompatibility: true`, Larastan also checks
+statically known class registrations through `singleton()` and `singletonIf()`,
+and constructor injection of classes marked with Laravel's `#[Singleton]` attribute.
+It reports when such a long-lived service depends on a request/job-scoped
+service, directly or through constructor-injected application classes.
+The lifetime attributes are available in Laravel 12+, while request-object
+checks work across supported Laravel versions.
+
+```php
+use Illuminate\Container\Attributes\Scoped;
+use Illuminate\Container\Attributes\Singleton;
+
+#[Scoped]
+final class CurrentTenant {}
+
+#[Singleton]
+final class InvoiceService
+{
+    public function __construct(private CurrentTenant $tenant) {}
+}
+```
+
+The diagnostic includes the dependency path, for example
+`InvoiceService -> CurrentTenant`. Injection of `Illuminate\Http\Request`
+(including Illuminate subclasses) is treated as request-scoped too.
+Laravel also aliases the **exact** `Symfony\Component\HttpFoundation\Request`
+base class to the current HTTP request; arbitrary Symfony-only subclasses are
+not assumed to have that lifetime. Optional injections of either bound base
+Request alias are analyzed as well.
+
+This check follows the same principle as .NET's *scope validation*: a singleton
+can outlive a scoped service and retain data from a previous request. The
+rule does **not** execute the application or resolve any services while
+analyzing them. The diagnostic flags a potential lifetime mismatch based on
+constructor injection. It does not prove that the dependency was stored in an
+instance property; constructor-only use can therefore produce conservative
+warnings. The rule is disabled unless Octane compatibility checking is enabled.
+
+To minimize false positives, the rule deliberately skips runtime factories,
+dynamic bindings, unresolvable interfaces, optional or ambiguous constructor
+parameters, and transitive paths through vendor code. It recognizes an
+explicit `#[Scoped]` declaration, but cannot infer arbitrary registrations
+performed elsewhere through `scoped()` or conditional providers. Analysis
+uses bounded breadth-first traversal to report the shortest statically known
+chain, within eight class levels and 64 visited classes. Required nullable
+class parameters and optional base HTTP Request parameters are analyzed
+(the framework binds Request per HTTP request);
+other optional parameters remain conservative.
+
+When the warning is valid, bind the owner as `scoped()` / `#[Scoped]`, or
+resolve current request data at call time, rather than retaining it in the
+singleton. See the [Laravel service-container documentation](https://laravel.com/docs/container#binding-scoped-singletons).
+
 ## RelationExistenceRule
 
 This rule checks relation names on Eloquent models, builders, and relations. It also checks `load*` calls on Eloquent collections and model `$with` and `$withCount` defaults.
