@@ -385,6 +385,7 @@ class IntegrationTest extends PHPStanTestCase
         foreach ($errors as $error) {
             $line = $error->getLine();
 
+            \error_log('AGG_SCOPE_TEST_DIAG ' . $line . ' ' . $error->getMessage());
             $this->assertNotNull($line);
             $this->assertContains($line, $expected);
             $this->assertArrayNotHasKey($line, $seen);
