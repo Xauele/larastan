@@ -312,7 +312,12 @@ are therefore potential mismatches, not a proof of final binding state.
 
 A known interface-to-concrete binding can be traversed for constructor
 dependencies. An unbound interface, an unresolvable factory, and transitive
-paths through vendor code are deliberately skipped. Native constructor
+paths through vendor code are deliberately skipped. For an unknown factory,
+the declared abstract's constructor is not inspected, because Laravel may
+instantiate an unrelated implementation. Explicitly scoped bindings remain
+request/job-scoped even when the concrete is supplied by a factory.
+Static facade registrations such as `App::singleton(...)` are not currently
+collected; this analysis recognizes instance method calls on a known container type. Native constructor
 parameters of unambiguous class type are followed for at most eight
 dependency levels / 64 visited classes. Optional dependencies are analysed
 only when the required binding is statically known or when their exact

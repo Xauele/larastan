@@ -18,8 +18,9 @@ use function str_replace;
  * Conservative counterpart to .NET DI scope validation.
  *
  * Only required constructor-injected object dependencies with an
- * unambiguous class type are followed, including nullable required classes. Runtime factories, interface bindings
- * and dynamic container aliases are intentionally not guessed.
+ * unambiguous class type are followed, including nullable required classes.
+ * Runtime factories, unresolved interface bindings and dynamic container
+ * aliases are intentionally not guessed.
  *
  * @internal
  */
@@ -117,6 +118,15 @@ final class ScopedDependencyDetector
 
                 if ($this->isScoped($dependency, $binding)) {
                     return [...$path, $dependencyName];
+                }
+
+                // A factory or supplied instance may return a completely different
+                // implementation. Only constructor-autowired concrete classes can
+                // be followed; the abstract's constructor proves nothing here.
+                // Keep the lifetime check above: scoped() with a factory still
+                // creates a request/job-scoped service.
+                if ($binding !== null && $binding['concrete'] === null) {
+                    continue;
                 }
 
                 $target   = $dependency;
