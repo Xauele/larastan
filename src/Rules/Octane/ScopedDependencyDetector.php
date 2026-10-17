@@ -64,10 +64,11 @@ final class ScopedDependencyDetector
             }
 
             foreach ($variants[0]->getParameters() as $parameter) {
-                // Optional dependencies can receive their defaults. Required
-                // nullable class parameters are still resolved by Laravel's
-                // container, so remove only null from their PHPStan type.
-                if ($parameter->isOptional() || $parameter->isVariadic()) {
+                // An optional class uses its default only when it is not bound
+                // to the container. Laravel binds the current HTTP Request on
+                // each request, so even ?Request $request = null is injected.
+                // Other optional class bindings can be dynamic: skip those.
+                if ($parameter->isVariadic()) {
                     continue;
                 }
 
@@ -84,6 +85,12 @@ final class ScopedDependencyDetector
                 }
 
                 $dependency = $dependencies[0];
+
+                // The base HTTP Request is always bound in an Octane HTTP
+                // worker; ordinary optional services may use their defaults.
+                if ($parameter->isOptional() && $dependency->getName() !== Request::class) {
+                    continue;
+                }
 
                 if ($this->isScoped($dependency)) {
                     return [...$path, $dependency->getName()];

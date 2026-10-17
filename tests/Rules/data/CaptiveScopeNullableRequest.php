@@ -21,8 +21,16 @@ final class OptionalNullableConsumer
     }
 }
 
+final class BoundOptionalRequestConsumer
+{
+    public function __construct(?Request $request = null)
+    {
+    }
+}
+
 function register(Container $app): void
 {
     $app->singleton(RequiredNullableConsumer::class);
     $app->singleton(OptionalNullableConsumer::class);
+    $app->singleton(BoundOptionalRequestConsumer::class);
 }

@@ -294,9 +294,9 @@ dynamic bindings, unresolvable interfaces, optional or ambiguous constructor
 parameters, and transitive paths through vendor code. It recognizes an
 explicit `#[Scoped]` declaration, but cannot infer arbitrary registrations
 performed elsewhere through `scoped()` or conditional providers. Analysis uses bounded breadth-first traversal to report the shortest statically
-known chain, within eight class levels and 64 visited classes. Required
-nullable object parameters (without defaults) are analyzed; optional
-parameters remain conservative.
+known chain, within eight class levels and 64 visited classes. Required nullable class parameters and optional base HTTP Request
+parameters are analyzed (the framework binds Request per HTTP request);
+other optional parameters remain conservative.
 
 When the warning is valid, bind the owner as `scoped()` / `#[Scoped]`, or
 resolve current request data at call time, rather than retaining it in the

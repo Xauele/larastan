@@ -75,6 +75,11 @@ final class SingletonBindingScopeRuleTest extends RuleTestCase
                 26,
                 'Register the owner as scoped(), or resolve the current context when handling each request/job.',
             ],
+            [
+                'Singleton ScopeCompatibilityNullableRequest\\BoundOptionalRequestConsumer captures a scoped dependency: ScopeCompatibilityNullableRequest\\BoundOptionalRequestConsumer -> Illuminate\\Http\\Request.',
+                35,
+                'Register the owner as scoped(), or resolve the current context when handling each request/job.',
+            ],
         ]);
     }
 
