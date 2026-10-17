@@ -23,5 +23,4 @@ final class OctaneOptionalRequestRuntimeTest extends TestCase
 
         self::assertSame($current, $singleton->request);
     }
-
 }
