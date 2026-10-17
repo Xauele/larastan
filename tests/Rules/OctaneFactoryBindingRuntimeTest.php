@@ -20,6 +20,8 @@ final class OctaneFactoryBindingRuntimeTest extends TestCase
 {
     public function testAnUnrelatedFactoryConstructorIsNeverUsed(): void
     {
+        require_once __DIR__ . '/data/CaptiveScopeFactoryBinding.php';
+
         $container = new Container();
 
         \ScopeFactoryBinding\register($container);
@@ -40,6 +42,8 @@ final class OctaneFactoryBindingRuntimeTest extends TestCase
 
     public function testScopedFactoryIsStillScopedEvenWithUnknownConcrete(): void
     {
+        require_once __DIR__ . '/data/CaptiveScopeFactoryBinding.php';
+
         $container = new Container();
 
         \ScopeFactoryBinding\register($container);
