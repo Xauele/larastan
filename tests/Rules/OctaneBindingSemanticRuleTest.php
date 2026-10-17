@@ -39,18 +39,18 @@ final class OctaneBindingSemanticRuleTest extends RuleTestCase
         }
 
         $this->analyse([__DIR__ . '/data/OctaneSemanticRoots.php'], [
-            ['Singleton OctaneSemanticRoots\\RootMappedCaptive has a constructor dependency on a scoped service: OctaneSemanticRoots\\RootMappedCaptive -> OctaneSemanticRoots\\\\CaptiveMappedConcrete -> Illuminate\\\\Http\\\\Request.', 42, 'Remove #[Singleton] or pass request-scoped information at call time instead of retaining it.'],
-            ['Singleton OctaneSemanticRoots\\RootToScoped has a constructor dependency on a scoped service: OctaneSemanticRoots\\RootToScoped -> OctaneSemanticRoots\\\\ScopedMappedConcrete.', 57, 'Remove #[Singleton] or pass request-scoped information at call time instead of retaining it.'],
-            ['Singleton OctaneSemanticRoots\\RootSelf has a constructor dependency on a scoped service: OctaneSemanticRoots\\RootSelf -> Illuminate\\\\Http\\\\Request.', 82, 'Remove #[Singleton] or pass request-scoped information at call time instead of retaining it.'],
+            ['Singleton OctaneSemanticRoots\\RootMappedCaptive has a constructor dependency on a scoped service: OctaneSemanticRoots\\RootMappedCaptive -> OctaneSemanticRoots\\CaptiveMappedConcrete -> Illuminate\\Http\\\\Request.', 42, 'Remove #[Singleton] or pass request-scoped information at call time instead of retaining it.'],
+            ['Singleton OctaneSemanticRoots\\RootToScoped has a constructor dependency on a scoped service: OctaneSemanticRoots\\RootToScoped -> OctaneSemanticRoots\\ScopedMappedConcrete.', 57, 'Remove #[Singleton] or pass request-scoped information at call time instead of retaining it.'],
+            ['Singleton OctaneSemanticRoots\\RootSelf has a constructor dependency on a scoped service: OctaneSemanticRoots\\RootSelf -> Illuminate\\Http\\\\Request.', 82, 'Remove #[Singleton] or pass request-scoped information at call time instead of retaining it.'],
         ]);
     }
 
     public function testSharedBindAndBindIfAreRealSingletons(): void
     {
         $this->analyse([__DIR__ . '/data/OctaneSemanticShared.php'], [
-            ['Singleton OctaneSemanticShared\\NamedShared has a constructor dependency on a scoped service: OctaneSemanticShared\\NamedShared -> Illuminate\\\\Http\\\\Request.', 47, 'Register the owner as scoped(), or resolve the current context when handling each request/job.'],
-            ['Singleton OctaneSemanticShared\\PositionalShared has a constructor dependency on a scoped service: OctaneSemanticShared\\PositionalShared -> Illuminate\\\\Http\\\\Request.', 48, 'Register the owner as scoped(), or resolve the current context when handling each request/job.'],
-            ['Singleton OctaneSemanticShared\\SharedViaBindIf has a constructor dependency on a scoped service: OctaneSemanticShared\\SharedViaBindIf -> Illuminate\\\\Http\\\\Request.', 49, 'Register the owner as scoped(), or resolve the current context when handling each request/job.'],
+            ['Singleton OctaneSemanticShared\\NamedShared has a constructor dependency on a scoped service: OctaneSemanticShared\\NamedShared -> Illuminate\\Http\\\\Request.', 47, 'Register the owner as scoped(), or resolve the current context when handling each request/job.'],
+            ['Singleton OctaneSemanticShared\\PositionalShared has a constructor dependency on a scoped service: OctaneSemanticShared\\PositionalShared -> Illuminate\\Http\\\\Request.', 48, 'Register the owner as scoped(), or resolve the current context when handling each request/job.'],
+            ['Singleton OctaneSemanticShared\\SharedViaBindIf has a constructor dependency on a scoped service: OctaneSemanticShared\\SharedViaBindIf -> Illuminate\\Http\\\\Request.', 49, 'Register the owner as scoped(), or resolve the current context when handling each request/job.'],
         ]);
     }
 
