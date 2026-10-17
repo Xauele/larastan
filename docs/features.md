@@ -337,3 +337,28 @@ Larastan boots your Laravel application during analysis. If that bootstrap fails
 and `--no-ansi` flags.
 
 ![Screenshot of a failed PHPStan analysis showcasing the custom styled error.](/docs/framework-bootstrap-error.png)
+
+## Contextual Eloquent aggregate properties
+
+When Eloquent query builders use statically known relationship aggregates,
+Larastan carries the added attributes **on the query's model type**, rather
+than permanently declaring those properties on every model instance.
+
+```php
+$user = User::query()->withSum('posts', 'views')->firstOrFail();
+$user->posts_sum_views; // int|float|string|null
+
+$user = User::query()->withExists('posts')->firstOrFail();
+$user->posts_exists; // bool
+```
+
+Literal `withCount()` aliases such as `'posts as published_posts_count'`
+are supported; multiple aggregate calls accumulate properties. Nonconstant
+relation names, unknown relations and dynamic columns retain the original
+types without speculative aggregate properties.
+
+The supported result types are intentionally conservative for numeric SQL
+aggregates because database drivers can expose numeric values as strings.
+This feature models query builder calls, not unrelated unsafely typed model
+instances.
+

@@ -304,6 +304,11 @@ services:
             - phpstan.broker.dynamicMethodReturnTypeExtension
 
     -
+        class: Larastan\Larastan\ReturnTypes\EloquentAggregateModelPropertiesExtension
+        tags:
+            - phpstan.broker.dynamicMethodReturnTypeExtension
+
+    -
         class: Larastan\Larastan\ReturnTypes\EloquentBuilderExtension
         tags:
             - phpstan.broker.dynamicMethodReturnTypeExtension
