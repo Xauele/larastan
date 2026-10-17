@@ -55,21 +55,15 @@ b = binding.read_text()
 kill(
     "disable-native-attribute-detection",
     detector,
-    "return $class->getNativeReflection()->getAttributes($attribute) !== [];",
-    "return false;",
+    "if (strcasecmp($reflectionAttribute->getName(), $attribute) === 0) {",
+    "if (false) {",
     attr_test,
 )
 kill(
     "regress-to-case-sensitive-attribute-names",
     detector,
-    "return $class->getNativeReflection()->getAttributes($attribute) !== [];",
-    """foreach ($class->getNativeReflection()->getAttributes() as $item) {
-            if ($item->getName() === $attribute) {
-                return true;
-            }
-        }
-
-        return false;""",
+    "strcasecmp($reflectionAttribute->getName(), $attribute) === 0",
+    "$reflectionAttribute->getName() === $attribute",
     attr_test,
 )
 kill(
