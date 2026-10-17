@@ -27,6 +27,7 @@ final class EloquentBuilderExtension implements DynamicMethodReturnTypeExtension
     public function __construct(
         private ReflectionProvider $reflectionProvider,
         private CollectionHelper $collectionHelper,
+        private EloquentAggregateResultTypeExtension $aggregateResultTypeExtension,
     ) {
     }
 
@@ -76,6 +77,17 @@ final class EloquentBuilderExtension implements DynamicMethodReturnTypeExtension
         MethodCall $methodCall,
         Scope $scope,
     ): Type|null {
+        // PHPStan unions non-null results from multiple return-type extensions.
+        // Route get() through the existing Eloquent extension so the refined
+        // collection replaces, rather than unions with, its unrefined result.
+        if ($methodReflection->getName() === 'get') {
+            $aggregateType = $this->aggregateResultTypeExtension->getTypeFromMethodCall($methodReflection, $methodCall, $scope);
+
+            if ($aggregateType !== null) {
+                return $aggregateType;
+            }
+        }
+
         if ($this->isForwardedQueryBuilderMethod($methodReflection)) {
             return $scope->getType($methodCall->var);
         }

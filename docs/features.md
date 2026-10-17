@@ -337,3 +337,30 @@ Larastan boots your Laravel application during analysis. If that bootstrap fails
 and `--no-ansi` flags.
 
 ![Screenshot of a failed PHPStan analysis showcasing the custom styled error.](/docs/framework-bootstrap-error.png)
+
+## Contextual Eloquent aggregate properties
+
+Larastan recognizes attributes selected by statically known relation aggregates
+in **inline Eloquent query chains** when retrieving their results:
+
+```php
+$user = User::query()->withSum('posts', 'views')->firstOrFail();
+$user->posts_sum_views; // int|float|string|null
+
+$user = User::query()->withExists('posts')->firstOrFail();
+$user->posts_exists; // bool
+```
+
+The inference also supports `withCount()` aliases, chained aggregate calls,
+`first()` and `get()`. If a later `select()` resets the SQL projection, earlier
+aggregate properties are not inferred. When aliases are reused, the last
+aggregate assignment takes precedence. It augments only the returned model or Eloquent
+collection item. The builder's `TModel` is unchanged: `make()`, `create()` and
+other new-model methods must not acquire SQL-selected properties.
+
+This deliberately requires statically known relationship names and a visible
+inline query chain. Queries stored in a variable before calling `first()` or
+`get()` cannot be correlated without carrying additional state in PHPStan's
+query type. Unknown names, columns, or relations are ignored conservatively.
+Numeric SQL aggregates may be returned as strings depending on the database.
+

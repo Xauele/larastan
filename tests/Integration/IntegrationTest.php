@@ -371,6 +371,33 @@ class IntegrationTest extends PHPStanTestCase
     }
 
     /**
+     * A green type assertion proves inference but not absence of phantom properties.
+     * Require four independent property-not-found errors and reject all extras.
+     *
+     * @throws Throwable
+     */
+    public function testContextualAggregatePropertiesRemainScoped(): void
+    {
+        $errors   = $this->runAnalyse(__DIR__ . '/data/contextual-aggregate-properties.php');
+        $expected = [9, 12, 15, 18];
+        $seen     = [];
+
+        foreach ($errors as $error) {
+            $line = $error->getLine();
+
+            \error_log('AGG_SCOPE_TEST_DIAG ' . $line . ' ' . $error->getMessage());
+            $this->assertNotNull($line);
+            $this->assertContains($line, $expected);
+            $this->assertArrayNotHasKey($line, $seen);
+            $this->assertStringContainsString('Access to an undefined property App\\User::$posts_exists.', $error->getMessage());
+
+            $seen[$line] = true;
+        }
+
+        $this->assertCount(count($expected), $seen);
+    }
+
+    /**
      * @param array<int, array<int, string>>|null $expectedErrors
      *
      * @throws Throwable
