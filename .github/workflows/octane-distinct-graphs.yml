@@ -1,0 +1,85 @@
+---
+name: Octane distinct-graph differential
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  seeded-graphs:
+    name: "722 distinct singleton registrations; 391 positive diagnoses"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: "dom, curl, libxml, mbstring, zip, fileinfo"
+          tools: "composer:v2"
+          coverage: none
+      - name: Install exact Laravel 12 range
+        run: composer update --with="laravel/framework:^12.0" --no-interaction --no-progress
+      - name: Deterministically generate unique code graphs
+        run: |
+          python3 -m py_compile tests/Rules/scripts/generate_octane_graphs.py tests/Rules/scripts/compare_octane_graphs.py
+          python3 tests/Rules/scripts/generate_octane_graphs.py
+          php -l tests/Rules/data/OctaneGeneratedGraphStress.php
+          php -l tests/Rules/scripts/octane_wide_runtime.php
+      - name: Actual Laravel confirms both permutations retain old request
+        run: php tests/Rules/scripts/octane_wide_runtime.php
+      - name: Prepare isolated config with optional new rule
+        shell: bash
+        run: |
+          for mode in off on; do
+            if [ "$mode" = on ]; then enabled=true; else enabled=false; fi
+            cat > "tests/octane-graph-$mode.neon" <<EOF
+          includes:
+            - phpstan-tests.neon
+          parameters:
+            level: 0
+            paths:
+              - Rules/data/OctaneGeneratedGraphStress.php
+            checkOctaneCompatibility: $enabled
+          EOF
+          done
+      - name: Exact differential contract + time/memory, cache disabled
+        shell: bash
+        run: |
+          set +e
+          set -uo pipefail
+          echo "| mode | trial | exit code | seconds | peak kB |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---:|---:|---:|---:|" >> "$GITHUB_STEP_SUMMARY"
+          for trial in 1 2 3; do
+            for mode in off on; do
+              cat > "tests/octane-graph-$mode-$trial.neon" <<EOF
+          includes:
+            - octane-graph-$mode.neon
+          parameters:
+            tmpDir: /tmp/larastan-unique-graphs-$mode-$trial
+          EOF
+              /usr/bin/time -f '%e %M' -o "$mode-$trial.metrics" ./vendor/bin/phpstan analyse --no-progress --memory-limit=3G --error-format=json -c "tests/octane-graph-$mode-$trial.neon" > "$mode-$trial.json" 2> "$mode-$trial.stderr"
+              rc=$?
+              read -r seconds rss <<< "$(tail -n 1 "$mode-$trial.metrics")"
+              echo "GRAPH_CSV $mode,$trial,$rc,$seconds,$rss"
+              echo "| $mode | $trial | $rc | $seconds | $rss |" >> "$GITHUB_STEP_SUMMARY"
+              if [ "$mode" = off ] && [ "$rc" -ne 0 ]; then
+                cat "$mode-$trial.stderr"
+                cat "$mode-$trial.json"
+                echo "OFF control failed" >&2
+                exit 1
+              fi
+              if [ "$mode" = on ] && [ "$rc" -ne 1 ]; then
+                cat "$mode-$trial.stderr"
+                cat "$mode-$trial.json"
+                echo "ON should have expected diagnoses" >&2
+                exit 1
+              fi
+              if [ "$mode" = on ]; then
+                python3 tests/Rules/scripts/compare_octane_graphs.py "$mode-$trial.json" tests/octane-generated-graph-oracle.json || exit 1
+              fi
+            done
+          done
