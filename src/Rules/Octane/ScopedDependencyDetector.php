@@ -49,10 +49,9 @@ final class ScopedDependencyDetector
             $current = $queue[$index]['class'];
             $path    = $queue[$index]['path'];
 
-            if ($this->isScoped($current)) {
-                return $path;
-            }
-
+            // The root is a singleton by definition of this validation.
+            // An explicitly bound singleton may also carry #[Scoped];
+            // inspect its dependencies, never report the root as captive.
             if (count($path) >= self::MAX_DEPTH || ! $current->hasNativeMethod('__construct')) {
                 continue;
             }

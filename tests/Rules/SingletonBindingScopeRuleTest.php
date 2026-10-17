@@ -33,6 +33,21 @@ final class SingletonBindingScopeRuleTest extends RuleTestCase
         ]);
     }
 
+    public function testExplicitSingletonOverridesScopedMarkerOnTheOwner(): void
+    {
+        if (! class_exists('Illuminate\\Container\\Attributes\\Scoped')) {
+            self::markTestSkipped('Native lifetime attributes are not available in Laravel 11.');
+        }
+
+        $this->analyse([__DIR__ . '/data/CaptiveScopeExplicitSingleton.php'], [
+            [
+                'Singleton ScopeCompatibilityExplicitSingleton\\ScopeMarkedAndCapturesRequest has a constructor dependency on a scoped service: ScopeCompatibilityExplicitSingleton\\ScopeMarkedAndCapturesRequest -> Illuminate\\Http\\Request.',
+                28,
+                'Register the owner as scoped(), or resolve the current context when handling each request/job.',
+            ],
+        ]);
+    }
+
     public function testRequestLifetimeDependencyOnAllSupportedLaravelVersions(): void
     {
         $this->analyse([__DIR__ . '/data/CaptiveScopeRequest.php'], [
