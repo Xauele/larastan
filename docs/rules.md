@@ -287,15 +287,20 @@ The diagnostic includes the dependency path, for example
 This check follows the same principle as .NET's *scope validation*: a singleton
 can outlive a scoped service and retain data from a previous request. The
 rule does **not** execute the application or resolve any services while
-analyzing them. It is disabled unless Octane compatibility checking is enabled.
+analyzing them. The diagnostic flags a potential lifetime mismatch based on
+constructor injection. It does not prove that the dependency was stored in an
+instance property; constructor-only use can therefore produce conservative
+warnings. The rule is disabled unless Octane compatibility checking is enabled.
 
 To minimize false positives, the rule deliberately skips runtime factories,
 dynamic bindings, unresolvable interfaces, optional or ambiguous constructor
 parameters, and transitive paths through vendor code. It recognizes an
 explicit `#[Scoped]` declaration, but cannot infer arbitrary registrations
-performed elsewhere through `scoped()` or conditional providers. Analysis uses bounded breadth-first traversal to report the shortest statically
-known chain, within eight class levels and 64 visited classes. Required nullable class parameters and optional base HTTP Request
-parameters are analyzed (the framework binds Request per HTTP request);
+performed elsewhere through `scoped()` or conditional providers. Analysis
+uses bounded breadth-first traversal to report the shortest statically known
+chain, within eight class levels and 64 visited classes. Required nullable
+class parameters and optional base HTTP Request parameters are analyzed
+(the framework binds Request per HTTP request);
 other optional parameters remain conservative.
 
 When the warning is valid, bind the owner as `scoped()` / `#[Scoped]`, or

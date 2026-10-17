@@ -26,17 +26,17 @@ final class SingletonBindingScopeRuleTest extends RuleTestCase
         }
 
         $this->analyse([__DIR__ . '/data/CaptiveScopeBindings.php'], [
-            ['Singleton ScopeCompatibility\\ReportService captures a scoped dependency: ScopeCompatibility\\ReportService -> ScopeCompatibility\\Repository -> ScopeCompatibility\\TenantContext.', 81, 'Register the owner as scoped(), or resolve the current context when handling each request/job.'],
-            ['Singleton ScopeCompatibility\\CurrentRequestService captures a scoped dependency: ScopeCompatibility\\CurrentRequestService -> Illuminate\\Http\\Request.', 82, 'Register the owner as scoped(), or resolve the current context when handling each request/job.'],
-            ['Singleton ScopeCompatibility\\ReportImplementation captures a scoped dependency: ScopeCompatibility\\ReportImplementation -> ScopeCompatibility\\TenantContext.', 83, 'Register the owner as scoped(), or resolve the current context when handling each request/job.'],
-            ['Singleton ScopeCompatibility\\ReportImplementation captures a scoped dependency: ScopeCompatibility\\ReportImplementation -> ScopeCompatibility\\TenantContext.', 98, 'Register the owner as scoped(), or resolve the current context when handling each request/job.'],
+            ['Singleton ScopeCompatibility\\ReportService has a constructor dependency on a scoped service: ScopeCompatibility\\ReportService -> ScopeCompatibility\\Repository -> ScopeCompatibility\\TenantContext.', 81, 'Register the owner as scoped(), or resolve the current context when handling each request/job.'],
+            ['Singleton ScopeCompatibility\\CurrentRequestService has a constructor dependency on a scoped service: ScopeCompatibility\\CurrentRequestService -> Illuminate\\Http\\Request.', 82, 'Register the owner as scoped(), or resolve the current context when handling each request/job.'],
+            ['Singleton ScopeCompatibility\\ReportImplementation has a constructor dependency on a scoped service: ScopeCompatibility\\ReportImplementation -> ScopeCompatibility\\TenantContext.', 83, 'Register the owner as scoped(), or resolve the current context when handling each request/job.'],
+            ['Singleton ScopeCompatibility\\ReportImplementation has a constructor dependency on a scoped service: ScopeCompatibility\\ReportImplementation -> ScopeCompatibility\\TenantContext.', 98, 'Register the owner as scoped(), or resolve the current context when handling each request/job.'],
         ]);
     }
 
     public function testRequestLifetimeDependencyOnAllSupportedLaravelVersions(): void
     {
         $this->analyse([__DIR__ . '/data/CaptiveScopeRequest.php'], [
-            ['Singleton ScopeCompatibilityRequest\RequestConsumer captures a scoped dependency: ScopeCompatibilityRequest\RequestConsumer -> Illuminate\Http\Request.', 19, 'Register the owner as scoped(), or resolve the current context when handling each request/job.'],
+            ['Singleton ScopeCompatibilityRequest\RequestConsumer has a constructor dependency on a scoped service: ScopeCompatibilityRequest\RequestConsumer -> Illuminate\Http\Request.', 19, 'Register the owner as scoped(), or resolve the current context when handling each request/job.'],
         ]);
     }
 
@@ -44,7 +44,7 @@ final class SingletonBindingScopeRuleTest extends RuleTestCase
     {
         $this->analyse([__DIR__ . '/data/CaptiveScopeRequestSubclass.php'], [
             [
-                'Singleton ScopeCompatibilityRequestSubclass\\SingletonConsumer captures a scoped dependency: ScopeCompatibilityRequestSubclass\\SingletonConsumer -> ScopeCompatibilityRequestSubclass\\CustomRequest.',
+                'Singleton ScopeCompatibilityRequestSubclass\\SingletonConsumer has a constructor dependency on a scoped service: ScopeCompatibilityRequestSubclass\\SingletonConsumer -> ScopeCompatibilityRequestSubclass\\CustomRequest.',
                 32,
                 'Register the owner as scoped(), or resolve the current context when handling each request/job.',
             ],
@@ -55,12 +55,12 @@ final class SingletonBindingScopeRuleTest extends RuleTestCase
     {
         $this->analyse([__DIR__ . '/data/CaptiveScopeDiamond.php'], [
             [
-                'Singleton ScopeCompatibilityDiamond\\Root captures a scoped dependency: ScopeCompatibilityDiamond\\Root -> ScopeCompatibilityDiamond\\ShortPath -> ScopeCompatibilityDiamond\\Shared -> ScopeCompatibilityDiamond\\Intermediate -> Illuminate\\Http\\Request.',
+                'Singleton ScopeCompatibilityDiamond\\Root has a constructor dependency on a scoped service: ScopeCompatibilityDiamond\\Root -> ScopeCompatibilityDiamond\\ShortPath -> ScopeCompatibilityDiamond\\Shared -> ScopeCompatibilityDiamond\\Intermediate -> Illuminate\\Http\\Request.',
                 85,
                 'Register the owner as scoped(), or resolve the current context when handling each request/job.',
             ],
             [
-                'Singleton ScopeCompatibilityDiamond\\PrioritizedRoot captures a scoped dependency: ScopeCompatibilityDiamond\\PrioritizedRoot -> Illuminate\\Http\\Request.',
+                'Singleton ScopeCompatibilityDiamond\\PrioritizedRoot has a constructor dependency on a scoped service: ScopeCompatibilityDiamond\\PrioritizedRoot -> Illuminate\\Http\\Request.',
                 97,
                 'Register the owner as scoped(), or resolve the current context when handling each request/job.',
             ],
@@ -71,17 +71,17 @@ final class SingletonBindingScopeRuleTest extends RuleTestCase
     {
         $this->analyse([__DIR__ . '/data/CaptiveScopeNullableRequest.php'], [
             [
-                'Singleton ScopeCompatibilityNullableRequest\\RequiredNullableConsumer captures a scoped dependency: ScopeCompatibilityNullableRequest\\RequiredNullableConsumer -> Illuminate\\Http\\Request.',
+                'Singleton ScopeCompatibilityNullableRequest\\RequiredNullableConsumer has a constructor dependency on a scoped service: ScopeCompatibilityNullableRequest\\RequiredNullableConsumer -> Illuminate\\Http\\Request.',
                 33,
                 'Register the owner as scoped(), or resolve the current context when handling each request/job.',
             ],
             [
-                'Singleton ScopeCompatibilityNullableRequest\\OptionalNullableConsumer captures a scoped dependency: ScopeCompatibilityNullableRequest\\OptionalNullableConsumer -> Illuminate\\Http\\Request.',
+                'Singleton ScopeCompatibilityNullableRequest\\OptionalNullableConsumer has a constructor dependency on a scoped service: ScopeCompatibilityNullableRequest\\OptionalNullableConsumer -> Illuminate\\Http\\Request.',
                 34,
                 'Register the owner as scoped(), or resolve the current context when handling each request/job.',
             ],
             [
-                'Singleton ScopeCompatibilityNullableRequest\\BoundOptionalRequestConsumer captures a scoped dependency: ScopeCompatibilityNullableRequest\\BoundOptionalRequestConsumer -> Illuminate\\Http\\Request.',
+                'Singleton ScopeCompatibilityNullableRequest\\BoundOptionalRequestConsumer has a constructor dependency on a scoped service: ScopeCompatibilityNullableRequest\\BoundOptionalRequestConsumer -> Illuminate\\Http\\Request.',
                 35,
                 'Register the owner as scoped(), or resolve the current context when handling each request/job.',
             ],
