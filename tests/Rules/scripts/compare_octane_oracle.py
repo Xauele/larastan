@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 
 payload = json.loads(Path(sys.argv[1]).read_text())
+laravel_major = int(sys.argv[2].lstrip("^").split(".")[0])
 reported = set()
 other = []
 for file_name, details in payload.get("files", {}).items():
@@ -29,12 +30,15 @@ definitely_captive = {
     "OptionalBoundConsumer",
     "InterfaceOnlyOwner",
     "BaselineNativeSingleton",
-    "AttributeOwnerOverriddenToTransient",
 }
+if laravel_major >= 12:
+    definitely_captive.add("AttributeOwnerOverriddenToTransient")
 definitely_not_captive_under_selected_binding = {
     "OwnerWithExplicitlySharedDependency",
     "BaselineTransient",
 }
+if laravel_major == 11:
+    definitely_not_captive_under_selected_binding.add("AttributeOwnerOverriddenToTransient")
 # Expected by the documented conservative rule, even though it never
 # stores the request and therefore cannot leak it through a property.
 policy_only_potential = {"ConstructorOnlyOwner"}
