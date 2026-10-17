@@ -55,7 +55,13 @@ jobs:
           echo "|---|---:|---:|---:|---:|" >> "$GITHUB_STEP_SUMMARY"
           for trial in 1 2 3; do
             for mode in off on; do
-              /usr/bin/time -f '%e %M' -o "$mode-$trial.metrics" ./vendor/bin/phpstan analyse --debug --no-progress --memory-limit=3G --error-format=json -c "tests/octane-graph-$mode.neon" > "$mode-$trial.json" 2> "$mode-$trial.stderr"
+              cat > "tests/octane-graph-$mode-$trial.neon" <<EOF
+          includes:
+            - octane-graph-$mode.neon
+          parameters:
+            tmpDir: /tmp/larastan-unique-graphs-$mode-$trial
+          EOF
+              /usr/bin/time -f '%e %M' -o "$mode-$trial.metrics" ./vendor/bin/phpstan analyse --no-progress --memory-limit=3G --error-format=json -c "tests/octane-graph-$mode-$trial.neon" > "$mode-$trial.json" 2> "$mode-$trial.stderr"
               rc=$?
               read -r seconds rss <<< "$(tail -n 1 "$mode-$trial.metrics")"
               echo "GRAPH_CSV $mode,$trial,$rc,$seconds,$rss"
