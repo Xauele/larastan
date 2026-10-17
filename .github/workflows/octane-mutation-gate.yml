@@ -39,6 +39,19 @@ jobs:
           rc=$?
           echo "PROBE_PHPUNIT_EXIT=$rc"
           grep -F 'ATTRIBUTE_PROBE' attr-probe.log || { cat attr-probe.log; exit 1; }
+      - name: Real PHPStan CLI integration - exact diagnostics, not RuleTestCase
+        shell: bash
+        run: |
+          set +e
+          ./vendor/bin/phpstan analyse -c tests/octane-cli-audit.neon --error-format=json --no-progress --memory-limit=3G > octane-cli.json 2> octane-cli.stderr
+          rc=$?
+          echo "CLI_PHPSTAN_EXIT=$rc"
+          if [ "$rc" -gt 1 ]; then
+            cat octane-cli.stderr
+            cat octane-cli.json
+            exit "$rc"
+          fi
+          python3 tests/Rules/scripts/compare_octane_cli.py octane-cli.json
       - name: Probe suite must kill 4 semantic mutations (not syntax errors)
         run: |
           python3 -m py_compile tests/Rules/scripts/octane_mutation_gate.py
