@@ -16,6 +16,8 @@ use ScopeFactoryBinding\SingletonWithClosure;
 use ScopeFactoryBinding\SingletonWithFactory;
 use ScopeFactoryBinding\SingletonWithScopedFactory;
 
+use function ScopeFactoryBinding\register;
+
 final class OctaneFactoryBindingRuntimeTest extends TestCase
 {
     public function testAnUnrelatedFactoryConstructorIsNeverUsed(): void
@@ -24,7 +26,7 @@ final class OctaneFactoryBindingRuntimeTest extends TestCase
 
         $container = new Container();
 
-        \ScopeFactoryBinding\register($container);
+        register($container);
 
         $arrowOwner   = $container->make(SingletonWithFactory::class);
         $closureOwner = $container->make(SingletonWithClosure::class);
@@ -46,7 +48,7 @@ final class OctaneFactoryBindingRuntimeTest extends TestCase
 
         $container = new Container();
 
-        \ScopeFactoryBinding\register($container);
+        register($container);
 
         $owner   = $container->make(SingletonWithScopedFactory::class);
         $context = $owner->context;
