@@ -66,9 +66,11 @@ final class OctaneExtendedRuntimeOracleTest extends TestCase
 
         try {
             $app = new Application();
+
             $unboundOptional = $app->make(OptionalUnboundConsumer::class);
 
             if (class_exists(Singleton::class)) {
+
                 // Laravel 12+ prefers the unbound constructor default.
                 self::assertNull($unboundOptional->context);
             } else {
