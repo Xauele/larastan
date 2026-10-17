@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Stringable;
 use function PHPStan\Testing\assertType;
 
-function test(ModelWithCasts $model, OtherModelWithCasts $other, ConditionalModelWithCasts $conditional, DynamicValueModelWithCasts $dynamic, PartiallyDynamicModelWithCasts $partial, PhpDocUnknownCastsModel $annotated, PhpDocOptionalCastsModel $optional, SelfConstantCastsModel $self, ChildInheritedCastsModel $inherited, LateStaticOverrideCastsModel $lateBound, DynamicKeyCastsModel $dynamicKey): void
+function test(ModelWithCasts $model, OtherModelWithCasts $other, ConditionalModelWithCasts $conditional, DynamicValueModelWithCasts $dynamic, PartiallyDynamicModelWithCasts $partial, PhpDocUnknownCastsModel $annotated, PhpDocOptionalCastsModel $optional, SelfConstantCastsModel $self, ChildInheritedCastsModel $inherited, LateStaticOverrideCastsModel $lateBound, DynamicKeyCastsModel $dynamicKey, TimestampStringCastsModel $timestamp): void
 {
     assertType('bool', $model->integer);
     assertType(Stringable::class, $model->string);
@@ -45,6 +45,19 @@ function test(ModelWithCasts $model, OtherModelWithCasts $other, ConditionalMode
     assertType('mixed', $dynamicKey->integer);
     assertType('mixed', $dynamicKey->string);
     assertType('mixed', $dynamicKey->toArray()['integer']);
+
+    // Laravel prioritizes casts() over the conventional date conversion.
+    assertType('string|null', $timestamp->created_at);
+}
+
+class TimestampStringCastsModel extends Model
+{
+    protected $table = 'users';
+
+    protected function casts(): array
+    {
+        return ['created_at' => 'string'];
+    }
 }
 
 class DynamicKeyCastsModel extends Model

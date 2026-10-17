@@ -15,4 +15,12 @@ final class ModelCastsRuntimeCompatibilityTest extends TestCase
 
         self::assertSame('string', $model->getCasts()['integer']);
     }
+
+    public function testExplicitStringCastWinsOverAutomaticTimestampHandling(): void
+    {
+        $model = new DynamicCastPrecedenceModel();
+        $model->setRawAttributes(['created_at' => '2026-01-01 12:34:56']);
+
+        self::assertSame('2026-01-01 12:34:56', $model->created_at);
+    }
 }
