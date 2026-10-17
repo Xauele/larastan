@@ -107,9 +107,11 @@ final class SingletonBindingScopeRule implements Rule
                 return false;
             }
 
-            if ($arg->name?->name === 'shared' || ($arg->name === null && $index === 2)) {
-                $shared = $arg->value;
+            if ($arg->name?->name !== 'shared' && ($arg->name !== null || $index !== 2)) {
+                continue;
             }
+
+            $shared = $arg->value;
         }
 
         return $shared instanceof Node\Expr\ConstFetch
