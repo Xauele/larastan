@@ -134,7 +134,11 @@ final class ScopedDependencyDetector
         // Explicit #[Scoped] subclasses remain covered.
         return $class->getName() === Request::class
             || $class->getName() === SymfonyRequest::class
-            || $this->hasAttribute($class, 'Illuminate\Container\Attributes\Scoped');
+            // Laravel's Container::getScopedTyped() checks #[Singleton] first.
+            // Conflicting attributes therefore describe a singleton, not a
+            // scoped dependency. Keep static diagnostics consistent with
+            // Laravel's runtime lifetime precedence.
+            || (! $this->isSingleton($class) && $this->hasAttribute($class, 'Illuminate\Container\Attributes\Scoped'));
     }
 
     private function hasAttribute(ClassReflection $class, string $attribute): bool
