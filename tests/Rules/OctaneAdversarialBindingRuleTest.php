@@ -22,10 +22,10 @@ final class OctaneAdversarialBindingRuleTest extends RuleTestCase
         $tip = 'Register the owner as scoped(), or resolve the current context when handling each request/job.';
 
         $this->analyse([__DIR__ . '/data/OctaneAdversarialNativeCases.php'], [
-            ['Singleton OctaneAdversarialNativeCases\\SharedViaPositionalBind has a constructor dependency on a scoped service: OctaneAdversarialNativeCases\\SharedViaPositionalBind -> Illuminate\\Http\\Request.', 82, $tip],
-            ['Singleton OctaneAdversarialNativeCases\\SharedViaNamedBind has a constructor dependency on a scoped service: OctaneAdversarialNativeCases\\SharedViaNamedBind -> Illuminate\\Http\\Request.', 83, $tip],
+            ['Singleton OctaneAdversarialNativeCases\\SharedViaPositionalBind has a constructor dependency on a scoped service: OctaneAdversarialNativeCases\\SharedViaPositionalBind -> Illuminate\\Http\\Request.', 86, $tip],
+            ['Singleton OctaneAdversarialNativeCases\\SharedViaNamedBind has a constructor dependency on a scoped service: OctaneAdversarialNativeCases\\SharedViaNamedBind -> Illuminate\\Http\\Request.', 85, $tip],
             ['Singleton OctaneAdversarialNativeCases\\SharedImplementation has a constructor dependency on a scoped service: OctaneAdversarialNativeCases\\SharedImplementation -> Illuminate\\Http\\Request.', 84, $tip],
-            ['Singleton OctaneAdversarialNativeCases\\BaselineExplicitSingleton has a constructor dependency on a scoped service: OctaneAdversarialNativeCases\\BaselineExplicitSingleton -> Illuminate\\Http\\Request.', 87, $tip],
+            ['Singleton OctaneAdversarialNativeCases\\BaselineExplicitSingleton has a constructor dependency on a scoped service: OctaneAdversarialNativeCases\\BaselineExplicitSingleton -> Illuminate\\Http\\Request.', 89, $tip],
         ]);
     }
 
