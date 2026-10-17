@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Rules;
 
-use Larastan\Larastan\Rules\Octane\ScopedDependencyDetector;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Node\InClassNode;
