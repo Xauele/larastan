@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Stringable;
 use function PHPStan\Testing\assertType;
 
-function test(ModelWithCasts $model, OtherModelWithCasts $other, ConditionalModelWithCasts $conditional, DynamicValueModelWithCasts $dynamic, PartiallyDynamicModelWithCasts $partial, PhpDocUnknownCastsModel $annotated, PhpDocOptionalCastsModel $optional, SelfConstantCastsModel $self, ChildInheritedCastsModel $inherited, LateStaticOverrideCastsModel $lateBound): void
+function test(ModelWithCasts $model, OtherModelWithCasts $other, ConditionalModelWithCasts $conditional, DynamicValueModelWithCasts $dynamic, PartiallyDynamicModelWithCasts $partial, PhpDocUnknownCastsModel $annotated, PhpDocOptionalCastsModel $optional, SelfConstantCastsModel $self, ChildInheritedCastsModel $inherited, LateStaticOverrideCastsModel $lateBound, DynamicKeyCastsModel $dynamicKey): void
 {
     assertType('bool', $model->integer);
     assertType(Stringable::class, $model->string);
@@ -16,8 +16,8 @@ function test(ModelWithCasts $model, OtherModelWithCasts $other, ConditionalMode
     assertType('string', $other->integer);
     assertType('int', $other->string);
 
-    // Conditional arrays cannot be inferred safely; retain schema types.
-    assertType('int', $conditional->integer);
+    // Conditional arrays can override schema types; do not assume int.
+    assertType('mixed', $conditional->integer);
 
     // casts() overrides $casts: an unresolved override is mixed, not bool.
     assertType('mixed', $dynamic->integer);
@@ -40,6 +40,28 @@ function test(ModelWithCasts $model, OtherModelWithCasts $other, ConditionalMode
 
     // static:: may resolve to a different cast in an inherited subclass.
     assertType('mixed', $lateBound->integer);
+
+    // A computed cast key can replace ANY existing $casts or schema key.
+    assertType('mixed', $dynamicKey->integer);
+    assertType('mixed', $dynamicKey->string);
+    assertType('mixed', $dynamicKey->toArray()['integer']);
+}
+
+class DynamicKeyCastsModel extends Model
+{
+    protected $table = 'model_with_casts';
+
+    protected $casts = ['integer' => 'bool'];
+
+    protected function casts(): array
+    {
+        return [$this->castColumn() => 'string'];
+    }
+
+    private function castColumn(): string
+    {
+        return 'integer';
+    }
 }
 
 class SelfConstantCastsModel extends Model

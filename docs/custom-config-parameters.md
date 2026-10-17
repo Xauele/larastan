@@ -123,9 +123,11 @@ not already a constant array shape and the model overrides Laravel's empty base
 are inferred precisely. An unresolved value for a known key is treated as
 `mixed`, not as a stale `$casts` property definition: Laravel's trait
 initializer merges `casts()` over `$casts`. This also supports arrays with
-both static and dynamic cast entries. Multiple returns and non-literal
-expressions retain existing inference limits; annotate those return shapes
-when possible. Source parsing never executes the `casts()` method.
+both static and dynamic cast entries. When the return type and source cannot establish a constant cast-key shape
+(for example computed array keys, conditional returns or delegated arrays),
+all model property cast types become `mixed` for safety. This conservatively
+handles overrides that may affect any column, but reduces precision. For
+such models, prefer a precise PHPDoc return shape when possible. Source parsing never executes the `casts()` method.
 
 To disable source parsing (for example in projects using fully annotated array
 shapes or expensive custom model declarations), set:

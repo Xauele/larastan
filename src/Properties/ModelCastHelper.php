@@ -71,6 +71,9 @@ class ModelCastHelper
     /** @var array<string, Type> */
     private array $parsedCastsMethods = [];
 
+    /** @var array<string, true> */
+    private array $castsWithUnknownKeys = [];
+
     public function __construct(
         private ReflectionProvider $reflectionProvider,
         private Parser $parser,
@@ -239,12 +242,19 @@ class ModelCastHelper
     {
         $modelCasts = $this->getModelCasts($modelClassReflection);
 
-        return array_key_exists($propertyName, $modelCasts);
+        return isset($this->castsWithUnknownKeys[$modelClassReflection->getName()])
+            || array_key_exists($propertyName, $modelCasts);
     }
 
     public function getCastForProperty(ClassReflection $modelClassReflection, string $propertyName): string|Type|null
     {
         $modelCasts = $this->getModelCasts($modelClassReflection);
+
+        // An unknown casts() key may override any schema-derived property
+        // or a previous entry from $casts. Do not claim an exact type.
+        if (isset($this->castsWithUnknownKeys[$modelClassReflection->getName()])) {
+            return new MixedType();
+        }
 
         return $modelCasts[$propertyName] ?? null;
     }
@@ -296,6 +306,11 @@ class ModelCastHelper
 
             if ($parsed->isConstantArray()->yes()) {
                 $castsMethodReturnType = $parsed;
+            } else {
+                // When parsing cannot determine a literal array shape, casts()
+                // can supply ANY key at runtime. Keeping a column's schema
+                // type or previous $casts entry would be unsound.
+                $this->castsWithUnknownKeys[$className] = true;
             }
         }
 
