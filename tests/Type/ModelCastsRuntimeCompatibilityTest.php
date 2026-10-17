@@ -21,6 +21,6 @@ final class ModelCastsRuntimeCompatibilityTest extends TestCase
         $model = new DynamicCastPrecedenceModel();
         $model->setRawAttributes(['created_at' => '2026-01-01 12:34:56']);
 
-        self::assertSame('2026-01-01 12:34:56', $model->created_at);
+        self::assertSame('2026-01-01 12:34:56', $model->getAttribute('created_at'));
     }
 }
