@@ -116,3 +116,4 @@ jobs:
           name: "casts-benchmark-${{ matrix.php-version }}"
           path: larastan/.casts-bench/
           retention-days: 7
+          include-hidden-files: true
