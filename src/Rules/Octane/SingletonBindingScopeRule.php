@@ -112,7 +112,7 @@ final class SingletonBindingScopeRule implements Rule
             }
         }
 
-        return $shared instanceof Node\\Expr\\ConstFetch
+        return $shared instanceof Node\Expr\ConstFetch
             && strtolower($shared->name->toString()) === 'true';
     }
 
