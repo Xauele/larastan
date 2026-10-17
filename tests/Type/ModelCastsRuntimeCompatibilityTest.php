@@ -4,10 +4,18 @@ declare(strict_types=1);
 
 namespace Tests\Type;
 
+use ModelCastsParsing\TraitAliasedCastsModel;
 use PHPUnit\Framework\TestCase;
 
 final class ModelCastsRuntimeCompatibilityTest extends TestCase
 {
+    public function testTraitMethodAliasedAsCastsMatchesLaravelRuntime(): void
+    {
+        $model = new TraitAliasedCastsModel();
+
+        self::assertSame('bool', $model->getCasts()['integer']);
+    }
+
     public function testCastsMethodOverridesOlderPropertyEntry(): void
     {
         // Laravel executes casts() at initialization; Larastan does not.
