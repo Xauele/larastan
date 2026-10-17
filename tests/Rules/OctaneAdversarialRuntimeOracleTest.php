@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use OctaneAdversarialNativeCases\MixedCaseScopedContext;
 use OctaneAdversarialNativeCases\MixedCaseSingleton;
 use OctaneAdversarialNativeCases\SharedContract;
+use OctaneAdversarialNativeCases\SharedViaBindIf;
 use OctaneAdversarialNativeCases\SharedViaNamedBind;
 use OctaneAdversarialNativeCases\SharedViaPositionalBind;
 use OctaneAdversarialNativeCases\TransientViaDefaultBind;
@@ -76,12 +77,17 @@ final class OctaneAdversarialRuntimeOracleTest extends TestCase
             self::assertSame($requestA, $named->request);
             self::assertSame($requestA, $contract->request);
 
+            $conditional = $app->make(SharedViaBindIf::class);
+            self::assertSame($requestA, $conditional->request);
+
             $app->instance('request', $requestB);
             $app->forgetScopedInstances();
 
             self::assertSame($positional, $app->make(SharedViaPositionalBind::class));
             self::assertSame($named, $app->make(SharedViaNamedBind::class));
             self::assertSame($contract, $app->make(SharedContract::class));
+            self::assertSame($conditional, $app->make(SharedViaBindIf::class));
+            self::assertSame($requestA, $conditional->request);
             self::assertSame($requestA, $positional->request);
             self::assertSame($requestA, $named->request);
             self::assertSame($requestA, $contract->request);
