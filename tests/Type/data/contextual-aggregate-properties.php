@@ -70,3 +70,16 @@ function forwardedModelStatic(): void
 
     assertType('bool', $user->posts_exists);
 }
+
+function diagnosticShapeSequence(): void
+{
+    $q1 = User::query()->withCount(['posts as published_posts_count' => static fn ($query) => $query->where('id', '>', 0)]);
+    $q2 = $q1->withExists(['accounts AS has_accounts']);
+    $q3 = $q2->withSum('posts', 'id');
+    $q4 = $q3->where('id', '>', 0);
+
+    assertType('PROBE_ONE', $q1);
+    assertType('PROBE_TWO', $q2);
+    assertType('PROBE_THREE', $q3);
+    assertType('PROBE_FOUR', $q4);
+}
