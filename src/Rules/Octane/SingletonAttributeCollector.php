@@ -9,6 +9,8 @@ use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
 use PHPStan\Node\InClassNode;
 
+use function strcasecmp;
+
 /**
  * Attribute singleton checks must run after binding collection, not per file:
  * another analysed service provider may register this class as scoped.
@@ -33,8 +35,12 @@ final class SingletonAttributeCollector implements Collector
             return null;
         }
 
-        return $class->getNativeReflection()->getAttributes('Illuminate\\Container\\Attributes\\Singleton') !== []
-            ? [$class->getName(), $node->getStartLine()]
-            : null;
+        foreach ($class->getNativeReflection()->getAttributes() as $attribute) {
+            if (strcasecmp($attribute->getName(), 'Illuminate\\Container\\Attributes\\Singleton') === 0) {
+                return [$class->getName(), $node->getStartLine()];
+            }
+        }
+
+        return null;
     }
 }

@@ -12,6 +12,7 @@ use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 
 use function array_slice;
 use function count;
+use function strcasecmp;
 use function str_contains;
 use function str_replace;
 
@@ -40,11 +41,6 @@ final class ScopedDependencyDetector
         return $this->hasAttribute($class, 'Illuminate\Container\Attributes\Singleton');
     }
 
-    /**
-     * @param array<string, array{lifetime: 'scoped'|'singleton'|'bind'|'unknown', concrete: string|null}> $bindings
-     *
-     * @return non-empty-list<string>|null
-     */
     /**
      * Follow the actual constructed concrete behind a singleton abstract.
      *
@@ -103,9 +99,21 @@ final class ScopedDependencyDetector
 
         $suffix = $this->findCaptiveDependency($current, $bindings);
 
-        return $suffix === null ? null : [...array_slice($path, 0, -1), ...$suffix];
+        if ($suffix === null) {
+            return null;
+        }
+
+        /** @var non-empty-list<string> $result */
+        $result = [...array_slice($path, 0, -1), ...$suffix];
+
+        return $result;
     }
 
+    /**
+     * @param array<string, array{lifetime: 'scoped'|'singleton'|'bind'|'unknown', concrete: string|null}> $bindings
+     *
+     * @return non-empty-list<string>|null
+     */
     public function findCaptiveDependency(ClassReflection $class, array $bindings = []): array|null
     {
         /** @var list<array{class: ClassReflection, path: non-empty-list<string>}> $queue */
@@ -271,8 +279,14 @@ final class ScopedDependencyDetector
 
     private function hasAttribute(ClassReflection $class, string $attribute): bool
     {
-        // Match the native container's named ReflectionAttribute lookup,
-        // including imported aliases and case-insensitive class names.
-        return $class->getNativeReflection()->getAttributes($attribute) !== [];
+        // Attribute names are case-insensitive in PHP. Compare resolved
+        // names exactly as Laravel's named ReflectionClass lookup does.
+        foreach ($class->getNativeReflection()->getAttributes() as $reflectionAttribute) {
+            if (strcasecmp($reflectionAttribute->getName(), $attribute) === 0) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
