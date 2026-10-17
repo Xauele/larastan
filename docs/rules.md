@@ -325,8 +325,9 @@ instantiate an unrelated implementation. Explicitly scoped bindings remain
 request/job-scoped even when the concrete is supplied by a factory.
 Static facade registrations such as `App::singleton(...)` are not currently
 collected; this analysis recognizes instance method calls on a known container type. Native constructor
-parameters of unambiguous class type are followed for at most eight
-dependency levels / 64 visited classes. Optional dependencies are analysed
+parameters of unambiguous class type are followed breadth-first with cycle
+detection. There is no parameter-order-dependent depth or width cutoff.
+The graph remains limited to statically available application classes. Optional dependencies are analysed
 only when the required binding is statically known or when their exact
 Request base type is automatically bound by the framework.
 

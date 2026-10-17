@@ -28,10 +28,6 @@ use function strcasecmp;
  */
 final class ScopedDependencyDetector
 {
-    private const MAX_CLASSES = 64;
-
-    private const MAX_DEPTH = 8;
-
     public function __construct(private ReflectionProvider $reflectionProvider)
     {
     }
@@ -75,7 +71,6 @@ final class ScopedDependencyDetector
 
             if (
                 isset($seen[$concrete])
-                || count($path) >= self::MAX_DEPTH
                 || ! $this->reflectionProvider->hasClass($concrete)
             ) {
                 return null;
@@ -133,7 +128,7 @@ final class ScopedDependencyDetector
             // The root is a singleton by definition of this validation.
             // An explicitly bound singleton may also carry #[Scoped];
             // inspect its dependencies, never report the root as captive.
-            if (count($path) >= self::MAX_DEPTH || ! $current->hasNativeMethod('__construct')) {
+            if (! $current->hasNativeMethod('__construct')) {
                 continue;
             }
 
@@ -237,7 +232,7 @@ final class ScopedDependencyDetector
 
                 $name = $target->getName();
 
-                if (isset($seen[$name]) || count($seen) >= self::MAX_CLASSES) {
+                if (isset($seen[$name])) {
                     continue;
                 }
 

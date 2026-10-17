@@ -1,0 +1,7 @@
+includes:
+    - phpstan-tests.neon
+parameters:
+    level: 0
+    paths:
+        - Rules/data/OctaneExtendedLifetimeCases.php
+    checkOctaneCompatibility: true
