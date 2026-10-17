@@ -117,7 +117,8 @@ final class OctaneExtendedRuntimeOracleTest extends TestCase
             if (class_exists(Singleton::class)) {
                 $overridden = $app->make(AttributeOwnerOverriddenToTransient::class);
                 self::assertSame($second, $overridden->request);
-                self::assertNotSame($overridden, $app->make(AttributeOwnerOverriddenToTransient::class));
+                // Native #[Singleton] still wins over an explicit bind(..., shared: false).
+                self::assertSame($overridden, $app->make(AttributeOwnerOverriddenToTransient::class));
             }
         } finally {
             Container::setInstance($previous);
