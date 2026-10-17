@@ -8,8 +8,6 @@ use Illuminate\Http\Request;
 use OctaneGeneratedGraphStress\WideFirstRoot;
 use OctaneGeneratedGraphStress\WideLastRoot;
 
-use function dirname;
-
 $root = dirname(__DIR__, 3);
 
 require $root . '/vendor/autoload.php';
