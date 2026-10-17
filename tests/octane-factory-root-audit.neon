@@ -1,0 +1,8 @@
+includes:
+    - phpstan-tests.neon
+
+parameters:
+    level: 0
+    paths:
+        - Rules/data/OctaneFactoryRootAudit.php
+    checkOctaneCompatibility: true
