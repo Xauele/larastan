@@ -27,10 +27,11 @@ final class OctaneAdversarialAttributeCaseRuleTest extends RuleTestCase
 
         $tip = 'Remove #[Singleton] or pass request-scoped information at call time instead of retaining it.';
 
+        // The imported mixed-case attributes also produce PHPStan's
+        // class.nameCase diagnostics; cover their exact real-CLI outcomes
+        // separately in compare_octane_cli.py instead of pretending this
+        // isolated RuleTestCase is a full PHPStan integration.
         $this->analyse([__DIR__ . '/data/OctaneAdversarialNativeCases.php'], [
-            ['Singleton OctaneAdversarialNativeCases\\MixedCaseSingleton has a constructor dependency on a scoped service: OctaneAdversarialNativeCases\\MixedCaseSingleton -> OctaneAdversarialNativeCases\\MixedCaseScopedContext.', 20, $tip],
-            ['Singleton OctaneAdversarialNativeCases\\StandardSingletonMixedCaseScope has a constructor dependency on a scoped service: OctaneAdversarialNativeCases\\StandardSingletonMixedCaseScope -> OctaneAdversarialNativeCases\\MixedCaseScopedContext.', 26, $tip],
-            ['Singleton OctaneAdversarialNativeCases\\MixedCaseSingletonStandardScope has a constructor dependency on a scoped service: OctaneAdversarialNativeCases\\MixedCaseSingletonStandardScope -> OctaneAdversarialNativeCases\\StandardScopedContext.', 32, $tip],
             ['Singleton OctaneAdversarialNativeCases\\BaselineSingleton has a constructor dependency on a scoped service: OctaneAdversarialNativeCases\\BaselineSingleton -> OctaneAdversarialNativeCases\\StandardScopedContext.', 38, $tip],
         ]);
     }
