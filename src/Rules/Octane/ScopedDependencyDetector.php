@@ -10,6 +10,7 @@ use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Type\TypeCombinator;
 use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 
+use function array_slice;
 use function count;
 use function str_contains;
 use function str_replace;
@@ -44,6 +45,67 @@ final class ScopedDependencyDetector
      *
      * @return non-empty-list<string>|null
      */
+    /**
+     * Follow the actual constructed concrete behind a singleton abstract.
+     *
+     * @param array<string, array{lifetime: 'scoped'|'singleton'|'bind'|'unknown', concrete: string|null}> $bindings
+     *
+     * @return non-empty-list<string>|null
+     */
+    public function findCaptiveDependencyForRoot(ClassReflection $root, array $bindings): array|null
+    {
+        $current = $root;
+        $path    = [$root->getName()];
+        $seen    = [$root->getName() => true];
+
+        while (true) {
+            $binding = $bindings[$current->getName()] ?? null;
+
+            if ($binding === null) {
+                break;
+            }
+
+            // An opaque factory, an instance or a conflicting registration
+            // does not establish which constructor the container will call.
+            if ($binding['lifetime'] === 'unknown' || $binding['concrete'] === null) {
+                return null;
+            }
+
+            $concrete = $binding['concrete'];
+
+            if ($concrete === $current->getName()) {
+                break;
+            }
+
+            if (
+                isset($seen[$concrete])
+                || count($path) >= self::MAX_DEPTH
+                || ! $this->reflectionProvider->hasClass($concrete)
+            ) {
+                return null;
+            }
+
+            $current = $this->reflectionProvider->getClass($concrete);
+
+            if ($current->isInterface() || $current->isAbstract()) {
+                return null;
+            }
+
+            $path[] = $current->getName();
+            $seen[$current->getName()] = true;
+
+            // Laravel resolves distinct concretes via Container::resolve();
+            // their native scoped lifetime still applies to that dependency.
+            if ($this->isScoped($current, $bindings[$current->getName()] ?? null)) {
+                return $path;
+            }
+        }
+
+        $suffix = $this->findCaptiveDependency($current, $bindings);
+
+        return $suffix === null ? null : [...array_slice($path, 0, -1), ...$suffix];
+    }
+
     public function findCaptiveDependency(ClassReflection $class, array $bindings = []): array|null
     {
         /** @var list<array{class: ClassReflection, path: non-empty-list<string>}> $queue */
@@ -209,12 +271,8 @@ final class ScopedDependencyDetector
 
     private function hasAttribute(ClassReflection $class, string $attribute): bool
     {
-        foreach ($class->getNativeReflection()->getAttributes() as $reflectionAttribute) {
-            if ($reflectionAttribute->getName() === $attribute) {
-                return true;
-            }
-        }
-
-        return false;
+        // Match the native container's named ReflectionAttribute lookup,
+        // including imported aliases and case-insensitive class names.
+        return $class->getNativeReflection()->getAttributes($attribute) !== [];
     }
 }

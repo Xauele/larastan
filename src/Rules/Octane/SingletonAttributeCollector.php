@@ -33,12 +33,8 @@ final class SingletonAttributeCollector implements Collector
             return null;
         }
 
-        foreach ($class->getNativeReflection()->getAttributes() as $attribute) {
-            if ($attribute->getName() === 'Illuminate\Container\Attributes\Singleton') {
-                return [$class->getName(), $node->getStartLine()];
-            }
-        }
-
-        return null;
+        return $class->getNativeReflection()->getAttributes('Illuminate\\Container\\Attributes\\Singleton') !== []
+            ? [$class->getName(), $node->getStartLine()]
+            : null;
     }
 }

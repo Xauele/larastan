@@ -161,7 +161,7 @@ final class SingletonLifetimeRule implements Rule
         $name = $class->getName();
 
         if (! array_key_exists($name, $cachedPaths)) {
-            $cachedPaths[$name] = $this->detector->findCaptiveDependency($class, $bindings);
+            $cachedPaths[$name] = $this->detector->findCaptiveDependencyForRoot($class, $bindings);
         }
 
         return $cachedPaths[$name];
