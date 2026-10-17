@@ -352,7 +352,9 @@ $user->posts_exists; // bool
 ```
 
 The inference also supports `withCount()` aliases, chained aggregate calls,
-`first()` and `get()`. It augments only the returned model or Eloquent
+`first()` and `get()`. If a later `select()` resets the SQL projection, earlier
+aggregate properties are not inferred. When aliases are reused, the last
+aggregate assignment takes precedence. It augments only the returned model or Eloquent
 collection item. The builder's `TModel` is unchanged: `make()`, `create()` and
 other new-model methods must not acquire SQL-selected properties.
 

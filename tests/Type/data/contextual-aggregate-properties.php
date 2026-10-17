@@ -85,3 +85,38 @@ function diagnosticShapeSequence(): void
     assertType('Illuminate\\Database\\Eloquent\\Builder<App\\User>', $q3);
     assertType('Illuminate\\Database\\Eloquent\\Builder<App\\User>', $q4);
 }
+
+function latestAliasWins(): void
+{
+    $user = User::query()
+        ->withCount(['posts as shared_stat'])
+        ->withExists(['posts as shared_stat'])
+        ->firstOrFail();
+
+    assertType('bool', $user->shared_stat);
+}
+
+function projectionReset(): void
+{
+    // select() wipes the previously selected aggregate expression in SQL.
+    $selected = User::query()->withExists('posts')->select('id')->firstOrFail();
+    assertType('App\\User', $selected);
+
+    // Selecting first and aggregating afterward retains the extra column.
+    $selected = User::query()->select('id')->withExists('posts')->firstOrFail();
+    assertType('bool', $selected->posts_exists);
+}
+
+function unselectedModelsAreNotAugmented(): void
+{
+    assertType('App\\User', User::query()->withExists('posts')->make());
+
+    $query = User::query()->withExists('posts');
+    // A separately stored builder has no statically visible call chain.
+    assertType('App\\User', $query->firstOrFail());
+}
+
+function nullableRetrieval(): void
+{
+    assertType('(App\\User&object{posts_exists: bool})|null', User::query()->withExists('posts')->first());
+}

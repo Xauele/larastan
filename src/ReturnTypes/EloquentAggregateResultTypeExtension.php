@@ -90,9 +90,18 @@ final class EloquentAggregateResultTypeExtension implements DynamicMethodReturnT
         // Analyze the syntactic query chain without mutating Builder<TModel>.
         // Properties become available only on hydrated query results.
         while ($query instanceof MethodCall) {
-            if ($query->name instanceof Identifier && array_key_exists($query->name->name, self::AGGREGATES)) {
-                foreach ($this->resolveAggregateProperties($query, $modelType, $scope) as $name => $type) {
-                    $attributes[$name] = $type;
+            if ($query->name instanceof Identifier) {
+                // select() replaces the selected columns. Aggregates earlier
+                // in the chain are no longer part of the hydrated SQL result.
+                if ($query->name->name === 'select') {
+                    break;
+                }
+
+                if (array_key_exists($query->name->name, self::AGGREGATES)) {
+                    foreach ($this->resolveAggregateProperties($query, $modelType, $scope) as $name => $type) {
+                        // We walk backwards: the last alias assignment wins.
+                        $attributes[$name] ??= $type;
+                    }
                 }
             }
 
@@ -101,7 +110,7 @@ final class EloquentAggregateResultTypeExtension implements DynamicMethodReturnT
 
         if ($query instanceof StaticCall && $query->name instanceof Identifier && array_key_exists($query->name->name, self::AGGREGATES)) {
             foreach ($this->resolveAggregateProperties($query, $modelType, $scope) as $name => $type) {
-                $attributes[$name] = $type;
+                $attributes[$name] ??= $type;
             }
         }
 
