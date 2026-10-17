@@ -43,15 +43,13 @@ jobs:
           test "$rc" -eq 1
           python3 - <<'PY'
           import json
-          import re
           from pathlib import Path
           data = json.loads(Path('/tmp/factory-root-cli.json').read_text())
           messages = [m['message'] for f in data['files'].values() for m in f['messages']]
           names = set()
           for m in messages:
-              match = re.match(r'Singleton (ScopeFactoryRootAudit\\\\[^ ]+) has a constructor dependency', m)
-              if match:
-                  names.add(match.group(1).split('\\\\')[-1])
+              if m.startswith('Singleton ScopeFactoryRootAudit') and ' has a constructor dependency' in m:
+                  names.add(m.split(' has a constructor dependency', 1)[0].rsplit(chr(92), 1)[-1])
           print('ACTUAL ROOT DIAGNOSTICS', sorted(names))
           assert {'FactoryRoot', 'ClassMappedRoot', 'RealRoot'} <= names, messages
           PY
