@@ -395,19 +395,21 @@ class ModelCastHelper
         $nativeMethod = $declaringClass->getNativeReflection()->getMethod($castsMethod->getName());
         $fileName     = $nativeMethod->getFileName();
         $startLine    = $nativeMethod->getStartLine();
+        $endLine      = $nativeMethod->getEndLine();
 
-        if ($fileName === false || $startLine === false) {
+        if ($fileName === false || $startLine === false || $endLine === false) {
             return $this->parsedCastsMethods[$className] = new NullType();
         }
 
         $stmts = $this->parser->parseFile($fileName);
 
-        // The source line disambiguates classes and traits sharing a file.
-        // If the location is not unique, do not guess the method body.
+        // A trait method can be imported as "casts" under an alias even
+        // when its source declaration uses a different method name. Match
+        // the exact reflected method span and refuse ambiguous matches.
         $method = null;
 
         foreach ((new NodeFinder())->findInstanceOf($stmts, Node\Stmt\ClassMethod::class) as $candidate) {
-            if ($candidate->getStartLine() !== $startLine || $candidate->name->toString() !== $castsMethod->getName()) {
+            if ($candidate->getStartLine() !== $startLine || $candidate->getEndLine() !== $endLine) {
                 continue;
             }
 
