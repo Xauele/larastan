@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Stringable;
 use function PHPStan\Testing\assertType;
 
-function test(ModelWithCasts $model, OtherModelWithCasts $other, ConditionalModelWithCasts $conditional, DynamicValueModelWithCasts $dynamic, PartiallyDynamicModelWithCasts $partial, PhpDocUnknownCastsModel $annotated, PhpDocOptionalCastsModel $optional, SelfConstantCastsModel $self, ChildInheritedCastsModel $inherited, TraitBoolCastModel $traitBool, TraitStringCastModel $traitString, TraitInheritedCastModel $traitInherited, ExternalTraitCastModel $externalTrait, AttributedCastModel $attributed, LateStaticOverrideCastsModel $lateBound, DynamicKeyCastsModel $dynamicKey, TimestampStringCastsModel $timestamp, CastedKeyWithoutSchemaModel $keyed): void
+function test(ModelWithCasts $model, OtherModelWithCasts $other, ConditionalModelWithCasts $conditional, DynamicValueModelWithCasts $dynamic, PartiallyDynamicModelWithCasts $partial, PhpDocUnknownCastsModel $annotated, PhpDocOptionalCastsModel $optional, SelfConstantCastsModel $self, ChildInheritedCastsModel $inherited, TraitBoolCastModel $traitBool, TraitStringCastModel $traitString, TraitInheritedCastModel $traitInherited, ExternalTraitCastModel $externalTrait, AttributedCastModel $attributed, TraitAliasedCastsModel $aliasedTrait, LateStaticOverrideCastsModel $lateBound, DynamicKeyCastsModel $dynamicKey, TimestampStringCastsModel $timestamp, CastedKeyWithoutSchemaModel $keyed): void
 {
     assertType('bool', $model->integer);
     assertType(Stringable::class, $model->string);
@@ -49,6 +49,9 @@ function test(ModelWithCasts $model, OtherModelWithCasts $other, ConditionalMode
     // ReflectionMethod reports the function line, while parsers can
     // include attribute lines in the AST node's source span.
     assertType('bool', $attributed->integer);
+
+    // ReflectionMethod names may differ from the trait method source due to aliasing.
+    assertType('bool', $aliasedTrait->integer);
 
     // static:: may resolve to a different cast in an inherited subclass.
     assertType('mixed', $lateBound->integer);
@@ -182,6 +185,23 @@ class AttributedCastModel extends Model
     {
         return ['integer' => 'bool'];
     }
+}
+
+trait AliasedCastMethod
+{
+    protected function getTraitCasts(): array
+    {
+        return ['integer' => 'bool'];
+    }
+}
+
+class TraitAliasedCastsModel extends Model
+{
+    use AliasedCastMethod {
+        getTraitCasts as casts;
+    }
+
+    protected $table = 'model_with_casts';
 }
 
 class BaseInheritedCastsModel extends Model
