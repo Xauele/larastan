@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Larastan\Larastan\Rules\Octane;
 
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 use PHPStan\Reflection\ClassReflection;
 use PHPStan\Type\TypeCombinator;
+use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 
 use function count;
 use function str_contains;
