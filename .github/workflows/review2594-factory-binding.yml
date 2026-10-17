@@ -33,4 +33,4 @@ jobs:
       - name: Install Laravel 13 and dependencies
         run: composer update --with='laravel/framework:^13.0' --no-interaction --no-progress
       - name: Run targeted native PHPStan collector rule regression
-        run: ./vendor/bin/phpunit tests/Rules/OctaneFactoryBindingRuleTest.php --colors=always -d memory_limit=1408M
+        run: ./vendor/bin/phpunit tests/Rules/OctaneFactoryBindingRuleTest.php tests/Rules/OctaneFactoryBindingRuntimeTest.php --colors=always -d memory_limit=1408M
