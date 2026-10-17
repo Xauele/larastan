@@ -53,6 +53,8 @@ function customBuilderAndCollection(): void
     assertType('bool', $post->comments_exists);
 
     $users = User::query()->withExists('posts')->get();
+    assertType('PROBE_GET_TYPE', $users);
+    assertType('PROBE_FIRST_TYPE', $users->firstOrFail());
     assertType('bool', $users->firstOrFail()->posts_exists);
 }
 
