@@ -11,9 +11,9 @@ use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 
 use function class_exists;
 use function count;
-use function strcasecmp;
 use function str_contains;
 use function str_replace;
+use function strcasecmp;
 
 /**
  * Conservative counterpart to .NET DI scope validation.
