@@ -1,0 +1,55 @@
+---
+name: Octane semantic oracle vs Laravel
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  runtime-comparison:
+    name: "Laravel ${{ matrix.laravel }} PHP ${{ matrix.php }} runtime/static differential"
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - php: "8.3"
+            laravel: "^11.42.2"
+          - php: "8.4"
+            laravel: "^12.0"
+          - php: "8.5"
+            laravel: "^13.0"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "${{ matrix.php }}"
+          extensions: "dom, curl, libxml, mbstring, zip, fileinfo"
+          tools: "composer:v2"
+          coverage: none
+      - name: Install pinned framework major
+        run: composer update --with="laravel/framework:${{ matrix.laravel }}" --no-interaction --no-progress
+      - name: PHP syntax
+        run: |
+          php -l tests/Rules/OctaneExtendedRuntimeOracleTest.php
+          php -l tests/Rules/data/OctaneExtendedLifetimeCases.php
+          python3 -m py_compile tests/Rules/scripts/compare_octane_oracle.py
+      - name: Truth oracle - actual Laravel Container lifecycle
+        run: ./vendor/bin/phpunit tests/Rules/OctaneExtendedRuntimeOracleTest.php --colors=never -d memory_limit=1408M
+      - name: Independently compare static analyzer to runtime oracle (must be exact)
+        shell: bash
+        run: |
+          set +e
+          ./vendor/bin/phpstan analyse -c tests/octane-extended-audit.neon --error-format=json --no-progress --memory-limit=3G > octane-oracle.json 2> octane-oracle.stderr
+          rc=$?
+          echo "PHPSTAN_EXIT=$rc"
+          if [ "$rc" -gt 1 ]; then
+            cat octane-oracle.stderr
+            cat octane-oracle.json
+            exit "$rc"
+          fi
+          python3 tests/Rules/scripts/compare_octane_oracle.py octane-oracle.json
