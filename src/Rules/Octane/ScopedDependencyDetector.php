@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Larastan\Larastan\Rules\Octane;
 
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 use PHPStan\Reflection\ClassReflection;
 use PHPStan\Type\TypeCombinator;
 
@@ -87,7 +88,11 @@ final class ScopedDependencyDetector
 
                 // The base HTTP Request is always bound in an Octane HTTP
                 // worker; ordinary optional services may use their defaults.
-                if ($parameter->isOptional() && $dependency->getName() !== Request::class) {
+                if (
+                    $parameter->isOptional()
+                    && $dependency->getName() !== Request::class
+                    && $dependency->getName() !== SymfonyRequest::class
+                ) {
                     continue;
                 }
 
@@ -124,7 +129,12 @@ final class ScopedDependencyDetector
     private function isScoped(ClassReflection $class): bool
     {
         // Request subclasses have a request lifetime even without #[Scoped].
-        return $class->is(Request::class) || $this->hasAttribute($class, 'Illuminate\Container\Attributes\Scoped');
+        // Laravel's Application aliases both concrete base Request classes to
+        // the per-request 'request' binding (Laravel 11, 12 and 13).
+        // Arbitrary Symfony subclasses do NOT share that container alias.
+        return $class->is(Request::class)
+            || $class->getName() === SymfonyRequest::class
+            || $this->hasAttribute($class, 'Illuminate\Container\Attributes\Scoped');
     }
 
     private function hasAttribute(ClassReflection $class, string $attribute): bool

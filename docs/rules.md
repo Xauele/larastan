@@ -282,7 +282,11 @@ final class InvoiceService
 
 The diagnostic includes the dependency path, for example
 `InvoiceService -> CurrentTenant`. Injection of `Illuminate\Http\Request`
-(including subclasses) is treated as request-scoped too.
+(including Illuminate subclasses) is treated as request-scoped too.
+Laravel also aliases the **exact** `Symfony\Component\HttpFoundation\Request`
+base class to the current HTTP request; arbitrary Symfony-only subclasses are
+not assumed to have that lifetime. Optional injections of either bound base
+Request alias are analyzed as well.
 
 This check follows the same principle as .NET's *scope validation*: a singleton
 can outlive a scoped service and retain data from a previous request. The
