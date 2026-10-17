@@ -1,0 +1,36 @@
+name: Review #2594 factory-binding regression
+
+on:
+  push:
+    branches:
+      - review/2594-factory-binding-regression
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: review2594-factory-binding
+  cancel-in-progress: true
+
+jobs:
+  targeted:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: 'dom, curl, libxml, mbstring, zip, fileinfo'
+          tools: 'composer:v2'
+          coverage: none
+      - name: Validate fixture and test syntax
+        run: |
+          php -l tests/Rules/data/CaptiveScopeFactoryBinding.php
+          php -l tests/Rules/OctaneFactoryBindingRuleTest.php
+      - name: Install Laravel 13 and dependencies
+        run: composer update --with='laravel/framework:^13.0' --no-interaction --no-progress
+      - name: Run targeted native PHPStan collector rule regression
+        run: ./vendor/bin/phpunit tests/Rules/OctaneFactoryBindingRuleTest.php --colors=always -d memory_limit=1408M
