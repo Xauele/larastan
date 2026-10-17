@@ -31,6 +31,14 @@ jobs:
           coverage: none
       - name: Install dependencies
         run: composer update --with="laravel/framework:${{ matrix.laravel }}" --no-interaction --no-progress
+      - name: Diagnostic PHPStan attribute names (intentionally failing probe)
+        shell: bash
+        run: |
+          set +e
+          OCTANE_ATTR_PROBE=1 ./vendor/bin/phpunit tests/Rules/OctaneAttributeNameProbeTest.php --colors=never > attr-probe.log 2>&1
+          rc=$?
+          echo "PROBE_PHPUNIT_EXIT=$rc"
+          grep -F 'ATTRIBUTE_PROBE' attr-probe.log || { cat attr-probe.log; exit 1; }
       - name: Probe suite must kill 4 semantic mutations (not syntax errors)
         run: |
           python3 -m py_compile tests/Rules/scripts/octane_mutation_gate.py
