@@ -81,7 +81,11 @@ jobs:
             for mode in off on; do
               /usr/bin/time -f '%e %M' -o "stress-$mode-$trial.metrics" ./vendor/bin/phpstan analyse --debug --no-progress --memory-limit=3G -c "tests/octane-stress-$mode.neon" > "stress-$mode-$trial.output" 2>&1
               rc=$?
-              read -r seconds rss < "stress-$mode-$trial.metrics"
+              read -r seconds rss <<< "$(tail -n 1 "stress-$mode-$trial.metrics")"
+              if [[ ! "$seconds" =~ ^[0-9]+([.][0-9]+)?$ || ! "$rss" =~ ^[0-9]+$ ]]; then
+                echo "Invalid GNU time metrics: $seconds / $rss" >&2
+                exit 1
+              fi
               count=$(grep -c 'has a constructor dependency on a scoped service' "stress-$mode-$trial.output" || :)
               echo "STRESS_CSV $mode,$trial,$rc,$count,$seconds,$rss"
               echo "| $mode | $trial | $rc | $count | $seconds | $rss |" >> "$GITHUB_STEP_SUMMARY"
