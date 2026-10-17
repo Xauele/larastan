@@ -31,6 +31,7 @@ use function array_merge;
 use function count;
 use function explode;
 use function in_array;
+use function is_a;
 use function is_int;
 use function preg_replace;
 use function sprintf;
@@ -192,11 +193,11 @@ final class EloquentAggregateModelPropertiesExtension implements DynamicMethodRe
         $existingProperties = [];
         $optionalProperties = [];
 
-        if ($modelType instanceof IntersectionType) {
+        if (is_a($modelType, IntersectionType::class)) {
             $parts = [];
 
             foreach ($modelType->getTypes() as $part) {
-                if (! $part instanceof ObjectShapeType) {
+                if (! is_a($part, ObjectShapeType::class)) {
                     $parts[] = $part;
                     continue;
                 }
