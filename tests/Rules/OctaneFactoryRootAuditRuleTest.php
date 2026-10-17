@@ -35,7 +35,7 @@ final class OctaneFactoryRootAuditRuleTest extends RuleTestCase
         $this->analyse([__DIR__ . '/data/OctaneFactoryRootAudit.php'], [
             [
                 'Singleton ScopeFactoryRootAudit\\RealRoot has a constructor dependency on a scoped service: ScopeFactoryRootAudit\\RealRoot -> Illuminate\\Http\\Request.',
-                27,
+                26,
                 'Remove #[Singleton] or pass request-scoped information at call time instead of retaining it.',
             ],
         ]);
