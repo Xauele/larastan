@@ -34,5 +34,5 @@ jobs:
         run: composer update --with='laravel/framework:^13.0' --no-interaction --no-progress
       - name: Real runtime behavior of an attributed root factory
         run: ./vendor/bin/phpunit tests/Rules/OctaneFactoryRootAuditRuntimeTest.php --colors=never
-      - name: Full PHPStan RuleTestCase suite: should be RED on missed root factory
+      - name: "Full PHPStan RuleTestCase suite: should be RED on missed root factory"
         run: composer run-script test:unit
