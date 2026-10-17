@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Rules;
 
+use Illuminate\Container\Attributes\Singleton;
 use Illuminate\Container\Container;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
@@ -14,6 +15,8 @@ use OctaneProviderBindingAudit\RegistrationProvider;
 use OctaneProviderBindingAudit\SafeRootImplementation;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
+
+use function class_exists;
 
 final class OctaneProviderBindingRuntimeTest extends TestCase
 {
@@ -43,7 +46,13 @@ final class OctaneProviderBindingRuntimeTest extends TestCase
 
             self::assertSame($owner, $app->make(ProviderOwner::class));
             self::assertSame($through, $app->make(ProviderListOwner::class));
-            self::assertSame($mapped, $app->make(HiddenConstructorRoot::class));
+            // Laravel 11 does not have the native #[Singleton] attribute.
+            // Its plain bind() maps to the safe concrete but stays transient.
+            if (class_exists(Singleton::class)) {
+                self::assertSame($mapped, $app->make(HiddenConstructorRoot::class));
+            } else {
+                self::assertNotSame($mapped, $app->make(HiddenConstructorRoot::class));
+            }
             self::assertSame($firstRequest, $app->make(ProviderListOwner::class)->carrier->request);
         } finally {
             Container::setInstance($previous);
