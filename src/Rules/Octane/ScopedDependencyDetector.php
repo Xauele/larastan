@@ -9,6 +9,7 @@ use PHPStan\Reflection\ClassReflection;
 use PHPStan\Type\TypeCombinator;
 use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 
+use function class_exists;
 use function count;
 use function str_contains;
 use function str_replace;
@@ -143,12 +144,13 @@ final class ScopedDependencyDetector
 
     private function hasAttribute(ClassReflection $class, string $attribute): bool
     {
-        foreach ($class->getNativeReflection()->getAttributes() as $reflectionAttribute) {
-            if ($reflectionAttribute->getName() === $attribute) {
-                return true;
-            }
+        // Match native Laravel lifetime policy: missing attribute classes on
+        // Laravel 11 are not active attributes, and PHP Reflection resolves
+        // case variants and use-aliases with its filtered getAttributes().
+        if (! class_exists($attribute)) {
+            return false;
         }
 
-        return false;
+        return $class->getNativeReflection()->getAttributes($attribute) !== [];
     }
 }
