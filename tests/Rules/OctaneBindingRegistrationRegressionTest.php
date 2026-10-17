@@ -5,18 +5,23 @@ declare(strict_types=1);
 namespace Tests\Rules;
 
 use Larastan\Larastan\Rules\Octane\ScopedDependencyDetector;
-use Larastan\Larastan\Rules\Octane\SingletonBindingScopeRule;
+use Larastan\Larastan\Rules\Octane\ContainerBindingCollector;
+use Larastan\Larastan\Rules\Octane\SingletonAttributeCollector;
+use Larastan\Larastan\Rules\Octane\SingletonLifetimeRule;
+use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Rules\Rule;
 use PHPStan\Testing\RuleTestCase;
 
 use function class_exists;
 
-/** @extends RuleTestCase<SingletonBindingScopeRule> */
+/** @extends RuleTestCase<SingletonLifetimeRule> */
 final class OctaneBindingRegistrationRegressionTest extends RuleTestCase
 {
     protected function getRule(): Rule
     {
-        return new SingletonBindingScopeRule(new ScopedDependencyDetector());
+        $provider = self::getContainer()->getByType(ReflectionProvider::class);
+
+        return new SingletonLifetimeRule(new ScopedDependencyDetector($provider), $provider);
     }
 
     public function testNativeScopedRegistrationAndExplicitSingletonOverride(): void
@@ -32,6 +37,11 @@ final class OctaneBindingRegistrationRegressionTest extends RuleTestCase
                 'Register the owner as scoped(), or resolve the current context when handling each request/job.',
             ],
         ]);
+    }
+
+    protected function getCollectors(): array
+    {
+        return [new ContainerBindingCollector(), new SingletonAttributeCollector()];
     }
 
     /** @return list<string> */

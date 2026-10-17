@@ -261,6 +261,11 @@ Will result in the following error:
 With the same opt-in `checkOctaneCompatibility: true`, Larastan also checks
 statically known class registrations through `singleton()` and `singletonIf()`,
 and constructor injection of classes marked with Laravel's `#[Singleton]` attribute.
+A PHPStan collector also reads `scoped()`, `scopedIf()`, `bind()` and
+`instance()` registrations across the **files included in the analysis**.
+This allows a `scoped()` binding without a `#[Scoped]` attribute to be
+recognized and an explicit singleton binding to override `#[Scoped]`
+without a spurious warning.
 It reports when such a long-lived service depends on a request/job-scoped
 service, directly or through constructor-injected application classes.
 The lifetime attributes are available in Laravel 12+, while request-object
@@ -282,7 +287,8 @@ final class InvoiceService
 
 The diagnostic includes the dependency path, for example
 `InvoiceService -> CurrentTenant`. Injection of `Illuminate\Http\Request`
-(including Illuminate subclasses) is treated as request-scoped too.
+is treated as request-scoped. Subclasses have to be explicitly scoped
+or bound to a scoped abstract to receive that lifetime.
 Laravel also aliases the **exact** `Symfony\Component\HttpFoundation\Request`
 base class to the current HTTP request; arbitrary Symfony-only subclasses are
 not assumed to have that lifetime. Optional injections of either bound base
@@ -296,16 +302,21 @@ constructor injection. It does not prove that the dependency was stored in an
 instance property; constructor-only use can therefore produce conservative
 warnings. The rule is disabled unless Octane compatibility checking is enabled.
 
-To minimize false positives, the rule deliberately skips runtime factories,
-dynamic bindings, unresolvable interfaces, optional or ambiguous constructor
-parameters, and transitive paths through vendor code. It recognizes an
-explicit `#[Scoped]` declaration, but cannot infer arbitrary registrations
-performed elsewhere through `scoped()` or conditional providers. Analysis
-uses bounded breadth-first traversal to report the shortest statically known
-chain, within eight class levels and 64 visited classes. Required nullable
-class parameters and optional base HTTP Request parameters are analyzed
-(the framework binds Request per HTTP request);
-other optional parameters remain conservative.
+The analysis does not execute service providers or know their runtime order.
+If two different registration methods or two different implementations target
+the same statically known abstract, its effective lifetime is **unknown** and
+that abstract is skipped rather than guessing the winner. Unanalysed providers,
+dynamic names, conditional branches, factories and runtime `singletonIf()`
+short-circuiting may still affect the final container state. These warnings
+are therefore potential mismatches, not a proof of final binding state.
+
+A known interface-to-concrete binding can be traversed for constructor
+dependencies. An unbound interface, an unresolvable factory, and transitive
+paths through vendor code are deliberately skipped. Native constructor
+parameters of unambiguous class type are followed for at most eight
+dependency levels / 64 visited classes. Optional dependencies are analysed
+only when the required binding is statically known or when their exact
+Request base type is automatically bound by the framework.
 
 When the warning is valid, bind the owner as `scoped()` / `#[Scoped]`, or
 resolve current request data at call time, rather than retaining it in the

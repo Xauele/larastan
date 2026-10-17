@@ -5,18 +5,23 @@ declare(strict_types=1);
 namespace Tests\Rules;
 
 use Larastan\Larastan\Rules\Octane\ScopedDependencyDetector;
-use Larastan\Larastan\Rules\Octane\SingletonBindingScopeRule;
+use Larastan\Larastan\Rules\Octane\ContainerBindingCollector;
+use Larastan\Larastan\Rules\Octane\SingletonAttributeCollector;
+use Larastan\Larastan\Rules\Octane\SingletonLifetimeRule;
+use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Rules\Rule;
 use PHPStan\Testing\RuleTestCase;
 
 use function class_exists;
 
-/** @extends RuleTestCase<SingletonBindingScopeRule> */
+/** @extends RuleTestCase<SingletonLifetimeRule> */
 final class SingletonBindingScopeRuleTest extends RuleTestCase
 {
     protected function getRule(): Rule
     {
-        return new SingletonBindingScopeRule(new ScopedDependencyDetector());
+        $provider = self::getContainer()->getByType(ReflectionProvider::class);
+
+        return new SingletonLifetimeRule(new ScopedDependencyDetector($provider), $provider);
     }
 
     public function testNativeServiceContainerLifetimes(): void
@@ -26,7 +31,6 @@ final class SingletonBindingScopeRuleTest extends RuleTestCase
         }
 
         $this->analyse([__DIR__ . '/data/CaptiveScopeBindings.php'], [
-            ['Singleton ScopeCompatibility\\ReportService has a constructor dependency on a scoped service: ScopeCompatibility\\ReportService -> ScopeCompatibility\\Repository -> ScopeCompatibility\\TenantContext.', 81, 'Register the owner as scoped(), or resolve the current context when handling each request/job.'],
             ['Singleton ScopeCompatibility\\CurrentRequestService has a constructor dependency on a scoped service: ScopeCompatibility\\CurrentRequestService -> Illuminate\\Http\\Request.', 82, 'Register the owner as scoped(), or resolve the current context when handling each request/job.'],
             ['Singleton ScopeCompatibility\\ReportImplementation has a constructor dependency on a scoped service: ScopeCompatibility\\ReportImplementation -> ScopeCompatibility\\TenantContext.', 83, 'Register the owner as scoped(), or resolve the current context when handling each request/job.'],
             ['Singleton ScopeCompatibility\\ReportImplementation has a constructor dependency on a scoped service: ScopeCompatibility\\ReportImplementation -> ScopeCompatibility\\TenantContext.', 98, 'Register the owner as scoped(), or resolve the current context when handling each request/job.'],
@@ -150,6 +154,11 @@ final class SingletonBindingScopeRuleTest extends RuleTestCase
                 'Register the owner as scoped(), or resolve the current context when handling each request/job.',
             ],
         ]);
+    }
+
+    protected function getCollectors(): array
+    {
+        return [new ContainerBindingCollector(), new SingletonAttributeCollector()];
     }
 
     /** @return list<string> */

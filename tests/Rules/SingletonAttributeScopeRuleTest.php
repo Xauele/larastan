@@ -5,18 +5,23 @@ declare(strict_types=1);
 namespace Tests\Rules;
 
 use Larastan\Larastan\Rules\Octane\ScopedDependencyDetector;
-use Larastan\Larastan\Rules\Octane\SingletonAttributeScopeRule;
+use Larastan\Larastan\Rules\Octane\ContainerBindingCollector;
+use Larastan\Larastan\Rules\Octane\SingletonAttributeCollector;
+use Larastan\Larastan\Rules\Octane\SingletonLifetimeRule;
+use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Rules\Rule;
 use PHPStan\Testing\RuleTestCase;
 
 use function class_exists;
 
-/** @extends RuleTestCase<SingletonAttributeScopeRule> */
+/** @extends RuleTestCase<SingletonLifetimeRule> */
 final class SingletonAttributeScopeRuleTest extends RuleTestCase
 {
     protected function getRule(): Rule
     {
-        return new SingletonAttributeScopeRule(new ScopedDependencyDetector());
+        $provider = self::getContainer()->getByType(ReflectionProvider::class);
+
+        return new SingletonLifetimeRule(new ScopedDependencyDetector($provider), $provider);
     }
 
     public function testNativeContainerAttributes(): void
@@ -32,6 +37,11 @@ final class SingletonAttributeScopeRuleTest extends RuleTestCase
             ['Singleton ScopeAttributeCompatibility\\InheritedRequestSingleton has a constructor dependency on a scoped service: ScopeAttributeCompatibility\\InheritedRequestSingleton -> Illuminate\\Http\\Request.', 78, 'Remove #[Singleton] or pass request-scoped information at call time instead of retaining it.'],
             ['Singleton ScopeAttributeCompatibility\\InheritedScopedSingleton has a constructor dependency on a scoped service: ScopeAttributeCompatibility\\InheritedScopedSingleton -> ScopeAttributeCompatibility\\TenantContext.', 90, 'Remove #[Singleton] or pass request-scoped information at call time instead of retaining it.'],
         ]);
+    }
+
+    protected function getCollectors(): array
+    {
+        return [new ContainerBindingCollector(), new SingletonAttributeCollector()];
     }
 
     /** @return list<string> */

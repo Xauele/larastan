@@ -6,6 +6,7 @@ namespace Larastan\Larastan\Rules\Octane;
 
 use Illuminate\Http\Request;
 use PHPStan\Reflection\ClassReflection;
+use PHPStan\Reflection\ReflectionProvider;
 use PHPStan\Type\TypeCombinator;
 use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 
@@ -28,13 +29,20 @@ final class ScopedDependencyDetector
 
     private const MAX_DEPTH = 8;
 
+    public function __construct(private ReflectionProvider $reflectionProvider)
+    {
+    }
+
     public function isSingleton(ClassReflection $class): bool
     {
         return $this->hasAttribute($class, 'Illuminate\Container\Attributes\Singleton');
     }
 
-    /** @return non-empty-list<string>|null */
-    public function findCaptiveDependency(ClassReflection $class): array|null
+    /**
+     * @param array<string, array{lifetime: 'scoped'|'singleton'|'bind'|'unknown', concrete: string|null}> $bindings
+     * @return non-empty-list<string>|null
+     */
+    public function findCaptiveDependency(ClassReflection $class, array $bindings = []): array|null
     {
         /** @var list<array{class: ClassReflection, path: non-empty-list<string>}> $queue */
         $queue = [['class' => $class, 'path' => [$class->getName()]]];
@@ -85,26 +93,60 @@ final class ScopedDependencyDetector
                 }
 
                 $dependency = $dependencies[0];
+                $dependencyName = $dependency->getName();
+                $binding = $bindings[$dependencyName] ?? null;
 
-                // The base HTTP Request is always bound in an Octane HTTP
-                // worker; ordinary optional services may use their defaults.
+                // Conflicting or dynamically materialised bindings have no
+                // statically reliable lifetime or constructor.
+                if (($binding['lifetime'] ?? null) === 'unknown') {
+                    continue;
+                }
+
+                // Laravel injects optional class parameters only when the
+                // abstract has a binding. The two Request aliases are bound
+                // by the HTTP application independently of user registration.
                 if (
                     $parameter->isOptional()
-                    && $dependency->getName() !== Request::class
-                    && $dependency->getName() !== SymfonyRequest::class
+                    && $dependencyName !== Request::class
+                    && $dependencyName !== SymfonyRequest::class
+                    && $binding === null
                 ) {
                     continue;
                 }
 
-                if ($this->isScoped($dependency)) {
-                    return [...$path, $dependency->getName()];
+                if ($this->isScoped($dependency, $binding)) {
+                    return [...$path, $dependencyName];
                 }
 
-                if ($dependency->isInterface() || $dependency->isAbstract()) {
+                $target = $dependency;
+                $nextPath = [...$path, $dependencyName];
+
+                // A known interface-to-concrete binding is traversable even
+                // when the interface has no constructor of its own. The
+                // concrete's own attributes remain relevant because Laravel
+                // resolves a distinct concrete through Container::resolve().
+                $concreteName = $binding['concrete'] ?? null;
+
+                if ($concreteName !== null && $concreteName !== $dependencyName) {
+                    if (! $this->reflectionProvider->hasClass($concreteName)) {
+                        continue;
+                    }
+
+                    $target = $this->reflectionProvider->getClass($concreteName);
+                    $nextPath[] = $concreteName;
+
+                    // A distinct concrete is resolved through Container::resolve()
+                    // (not build()), so its native scoped lifetime still applies.
+                    if ($this->isScoped($target, $bindings[$concreteName] ?? null)) {
+                        return $nextPath;
+                    }
+                }
+
+                if ($target->isInterface() || $target->isAbstract()) {
                     continue;
                 }
 
-                $file = $dependency->getFileName();
+                $file = $target->getFileName();
 
                 // Do not guess transitive dependencies through vendor code
                 // or PHP extensions.
@@ -112,33 +154,46 @@ final class ScopedDependencyDetector
                     continue;
                 }
 
-                $name = $dependency->getName();
+                $name = $target->getName();
 
                 if (isset($seen[$name]) || count($seen) >= self::MAX_CLASSES) {
                     continue;
                 }
 
                 $seen[$name] = true;
-                $queue[]     = ['class' => $dependency, 'path' => [...$path, $name]];
+                $queue[] = ['class' => $target, 'path' => $nextPath];
             }
         }
 
         return null;
     }
 
-    private function isScoped(ClassReflection $class): bool
+    /** @param array{lifetime: 'scoped'|'singleton'|'bind'|'unknown', concrete: string|null}|null $binding */
+    private function isScoped(ClassReflection $class, array|null $binding): bool
     {
-        // Laravel aliases only the exact Illuminate and Symfony base
-        // Request classes to its per-request 'request' binding. An unbound
-        // subclass of either is not automatically the active request.
-        // Explicit #[Scoped] subclasses remain covered.
-        return $class->getName() === Request::class
-            || $class->getName() === SymfonyRequest::class
-            // Laravel's Container::getScopedTyped() checks #[Singleton] first.
-            // Conflicting attributes therefore describe a singleton, not a
-            // scoped dependency. Keep static diagnostics consistent with
-            // Laravel's runtime lifetime precedence.
-            || (! $this->isSingleton($class) && $this->hasAttribute($class, 'Illuminate\Container\Attributes\Scoped'));
+        // These exact classes are Laravel's active request aliases in an HTTP
+        // application. Ordinary user-defined Request subclasses are not.
+        if ($class->getName() === Request::class || $class->getName() === SymfonyRequest::class) {
+            return true;
+        }
+
+        if ($binding !== null) {
+            if ($binding['lifetime'] === 'scoped') {
+                return true;
+            }
+
+            if ($binding['lifetime'] === 'singleton') {
+                // Explicit singleton() overrides #[Scoped] for this abstract.
+                return false;
+            }
+        }
+
+        // Container::isShared() does not infer attributes for an interface:
+        // class_exists() is false for interfaces. An explicit scoped()
+        // registration is needed to establish that lifetime.
+        return ! $class->isInterface()
+            && ! $this->isSingleton($class)
+            && $this->hasAttribute($class, 'Illuminate\Container\Attributes\Scoped');
     }
 
     private function hasAttribute(ClassReflection $class, string $attribute): bool
