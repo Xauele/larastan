@@ -1,0 +1,32 @@
+name: "Fork casts performance (synthetic)"
+
+on:
+  pull_request:
+    paths:
+      - 'src/Properties/ModelCastHelper.php'
+      - 'tools/benchmarks/model-casts.sh'
+      - '.github/workflows/fork-casts-performance.yml'
+
+jobs:
+  compare-cast-parser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: "dom, curl, libxml, mbstring, zip, fileinfo"
+          tools: "composer:v2"
+          coverage: "none"
+      - name: Install compatible Laravel and PHPStan
+        run: composer update --with='laravel/framework:^13.0' --no-interaction --no-progress
+      - name: Compare off and on using the same generated corpus
+        run: bash tools/benchmarks/model-casts.sh 180 3
+      - name: Archive raw benchmark output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fork-casts-benchmark
+          path: .casts-bench-results/
+          if-no-files-found: warn
+          include-hidden-files: true
