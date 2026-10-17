@@ -66,7 +66,15 @@ final class OctaneExtendedRuntimeOracleTest extends TestCase
 
         try {
             $app = new Application();
-            self::assertNull($app->make(OptionalUnboundConsumer::class)->context);
+            $unboundOptional = $app->make(OptionalUnboundConsumer::class);
+
+            if (class_exists(Singleton::class)) {
+                // Laravel 12+ prefers the unbound constructor default.
+                self::assertNull($unboundOptional->context);
+            } else {
+                // Laravel 11 first attempts autowiring, even with a null default.
+                self::assertInstanceOf(ContextFromScopedBinding::class, $unboundOptional->context);
+            }
             registerLifetimeCases($app);
 
             $context = $app->make(ContextFromScopedBinding::class);
