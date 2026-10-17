@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Rules;
 
 use Larastan\Larastan\Rules\Octane\ScopedDependencyDetector;
+use Larastan\Larastan\Rules\Octane\SingletonAttributeScopeRule;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Node\InClassNode;
@@ -14,6 +15,7 @@ use PHPStan\Rules\RuleErrorBuilder;
 use PHPStan\Testing\RuleTestCase;
 
 use function array_map;
+use function count;
 use function getenv;
 use function implode;
 use function str_contains;
@@ -40,6 +42,8 @@ final class OctaneAttributeNameProbeRule implements Rule
         $detector = new ScopedDependencyDetector();
         $singleton = $detector->isSingleton($class) ? 'yes' : 'no';
         $cap = $detector->findCaptiveDependency($class);
+        $nativeRule = new SingletonAttributeScopeRule($detector);
+        $warnings = $nativeRule->processNode($node, $scope);
 
         return [
             RuleErrorBuilder::message(
@@ -47,7 +51,8 @@ final class OctaneAttributeNameProbeRule implements Rule
                 ' native=' . implode('|', $native) .
                 ' phpstan=' . implode('|', $phpstan) .
                 ' singleton=' . $singleton .
-                ' captured=' . ($cap === null ? 'none' : implode('>', $cap)),
+                ' captured=' . ($cap === null ? 'none' : implode('>', $cap)) .
+                ' ruleWarnings=' . count($warnings),
             )->build(),
         ];
     }
