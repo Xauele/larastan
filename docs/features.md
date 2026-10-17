@@ -340,9 +340,8 @@ and `--no-ansi` flags.
 
 ## Contextual Eloquent aggregate properties
 
-When Eloquent query builders use statically known relationship aggregates,
-Larastan carries the added attributes **on the query's model type**, rather
-than permanently declaring those properties on every model instance.
+Larastan recognizes attributes selected by statically known relation aggregates
+in **inline Eloquent query chains** when retrieving their results:
 
 ```php
 $user = User::query()->withSum('posts', 'views')->firstOrFail();
@@ -352,13 +351,14 @@ $user = User::query()->withExists('posts')->firstOrFail();
 $user->posts_exists; // bool
 ```
 
-Literal `withCount()` aliases such as `'posts as published_posts_count'`
-are supported; multiple aggregate calls accumulate properties. Nonconstant
-relation names, unknown relations and dynamic columns retain the original
-types without speculative aggregate properties.
+The inference also supports `withCount()` aliases, chained aggregate calls,
+`first()` and `get()`. It augments only the returned model or Eloquent
+collection item. The builder's `TModel` is unchanged: `make()`, `create()` and
+other new-model methods must not acquire SQL-selected properties.
 
-The supported result types are intentionally conservative for numeric SQL
-aggregates because database drivers can expose numeric values as strings.
-This feature models query builder calls, not unrelated unsafely typed model
-instances.
+This deliberately requires statically known relationship names and a visible
+inline query chain. Queries stored in a variable before calling `first()` or
+`get()` cannot be correlated without carrying additional state in PHPStan's
+query type. Unknown names, columns, or relations are ignored conservatively.
+Numeric SQL aggregates may be returned as strings depending on the database.
 

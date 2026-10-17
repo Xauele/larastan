@@ -78,8 +78,8 @@ function diagnosticShapeSequence(): void
     $q3 = $q2->withSum('posts', 'id');
     $q4 = $q3->where('id', '>', 0);
 
-    assertType('PROBE_ONE', $q1);
-    assertType('PROBE_TWO', $q2);
-    assertType('PROBE_THREE', $q3);
-    assertType('PROBE_FOUR', $q4);
+    assertType('Illuminate\\Database\\Eloquent\\Builder<App\\User>', $q1);
+    assertType('Illuminate\\Database\\Eloquent\\Builder<App\\User>', $q2);
+    assertType('Illuminate\\Database\\Eloquent\\Builder<App\\User>', $q3);
+    assertType('Illuminate\\Database\\Eloquent\\Builder<App\\User>', $q4);
 }

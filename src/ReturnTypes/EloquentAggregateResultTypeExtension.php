@@ -7,18 +7,19 @@ namespace Larastan\Larastan\ReturnTypes;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use Larastan\Larastan\Support\CollectionHelper;
 use Larastan\Larastan\Types\RelationOf\RelationOfType;
 use PhpParser\Node\Expr\MethodCall;
+use PhpParser\Node\Expr\StaticCall;
+use PhpParser\Node\Identifier;
 use PHPStan\Analyser\Scope;
 use PHPStan\Reflection\MethodReflection;
 use PHPStan\Type\BooleanType;
 use PHPStan\Type\Constant\ConstantStringType;
 use PHPStan\Type\DynamicMethodReturnTypeExtension;
 use PHPStan\Type\FloatType;
-use PHPStan\Type\Generic\GenericObjectType;
 use PHPStan\Type\IntegerRangeType;
 use PHPStan\Type\IntegerType;
-use PHPStan\Type\IntersectionType;
 use PHPStan\Type\NullType;
 use PHPStan\Type\ObjectShapeType;
 use PHPStan\Type\ObjectType;
@@ -27,26 +28,25 @@ use PHPStan\Type\Type;
 use PHPStan\Type\TypeCombinator;
 
 use function array_key_exists;
-use function array_merge;
 use function count;
 use function explode;
 use function in_array;
-use function is_a;
 use function is_int;
 use function preg_replace;
 use function sprintf;
 use function strtolower;
 
 /**
- * Augments an Eloquent builder's model type with attributes actually selected
- * by statically known relationship aggregate calls. Nothing is added globally
- * to the model's class reflection.
+ * Infer extra Eloquent aggregate properties only at query retrieval.
+ *
+ * The builder's TModel must not be widened: make(), create(), and similar
+ * operations also return TModel but do not select aggregate attributes.
  *
  * @internal
  */
-final class EloquentAggregateModelPropertiesExtension implements DynamicMethodReturnTypeExtension
+final class EloquentAggregateResultTypeExtension implements DynamicMethodReturnTypeExtension
 {
-    private const METHODS = [
+    private const AGGREGATES = [
         'withCount' => 'count',
         'withExists' => 'exists',
         'withMin' => 'min',
@@ -55,6 +55,10 @@ final class EloquentAggregateModelPropertiesExtension implements DynamicMethodRe
         'withSum' => 'sum',
     ];
 
+    public function __construct(private CollectionHelper $collectionHelper)
+    {
+    }
+
     public function getClass(): string
     {
         return Builder::class;
@@ -62,65 +66,100 @@ final class EloquentAggregateModelPropertiesExtension implements DynamicMethodRe
 
     public function isMethodSupported(MethodReflection $methodReflection): bool
     {
-        return array_key_exists($methodReflection->getName(), self::METHODS);
+        return in_array($methodReflection->getName(), ['first', 'firstOrFail', 'sole', 'get'], true);
     }
 
     public function getTypeFromMethodCall(MethodReflection $methodReflection, MethodCall $methodCall, Scope $scope): Type|null
     {
-        $receiverType = $scope->getType($methodCall->var);
+        $builder = $scope->getType($methodCall->var);
 
-        // Query the type API rather than inspecting a concrete GenericObjectType:
-        // intersections with accessories remain valid after earlier aggregates.
-        $reflections = $receiverType->getObjectClassReflections();
-
-        if (count($reflections) !== 1 || ! $reflections[0]->is(Builder::class) || $reflections[0]->getActiveTemplateTypeMap()->count() !== 1) {
+        if (! (new ObjectType(Builder::class))->isSuperTypeOf($builder)->yes()) {
             return null;
         }
 
-        $builderReflection = $reflections[0];
-        $modelType         = $receiverType->getTemplateType(Builder::class, 'TModel');
+        $modelType = $builder->getTemplateType(Builder::class, 'TModel');
+        $models    = $modelType->getObjectClassNames();
 
-        if (! (new ObjectType(Model::class))->isSuperTypeOf($modelType)->yes()) {
+        if (count($models) !== 1 || ! (new ObjectType(Model::class))->isSuperTypeOf($modelType)->yes()) {
             return null;
         }
 
-        $arguments = [];
+        $attributes = [];
+        $query      = $methodCall->var;
 
-        foreach ($methodCall->getArgs() as $index => $argument) {
-            if ($argument->unpack) {
-                return null;
+        // Analyze the syntactic query chain without mutating Builder<TModel>.
+        // Properties become available only on hydrated query results.
+        while ($query instanceof MethodCall) {
+            if ($query->name instanceof Identifier && array_key_exists($query->name->name, self::AGGREGATES)) {
+                foreach ($this->resolveAggregateProperties($query, $modelType, $scope) as $name => $type) {
+                    $attributes[$name] = $type;
+                }
             }
 
-            $arguments[$argument->name?->toString() ?? $index] = $scope->getType($argument->value);
+            $query = $query->var;
         }
 
-        $relations = $arguments['relations'] ?? $arguments['relation'] ?? $arguments[0] ?? null;
+        if ($query instanceof StaticCall && $query->name instanceof Identifier && array_key_exists($query->name->name, self::AGGREGATES)) {
+            foreach ($this->resolveAggregateProperties($query, $modelType, $scope) as $name => $type) {
+                $attributes[$name] = $type;
+            }
+        }
 
-        if ($relations === null) {
+        if ($attributes === []) {
             return null;
         }
 
-        $operation = self::METHODS[$methodReflection->getName()];
+        $resultModel = TypeCombinator::intersect($modelType, new ObjectShapeType($attributes, []));
+
+        return match ($methodReflection->getName()) {
+            'get' => $this->collectionHelper->determineCollectionClass($models[0], $resultModel),
+            'first' => TypeCombinator::addNull($resultModel),
+            default => $resultModel,
+        };
+    }
+
+    /**
+     * @return array<string, Type>
+     */
+    private function resolveAggregateProperties(MethodCall|StaticCall $call, Type $modelType, Scope $scope): array
+    {
+        $arguments = [];
+
+        foreach ($call->getArgs() as $position => $argument) {
+            if ($argument->unpack) {
+                return [];
+            }
+
+            $arguments[$argument->name?->toString() ?? $position] = $scope->getType($argument->value);
+        }
+
+        $relationType = $arguments['relations'] ?? $arguments['relation'] ?? $arguments[0] ?? null;
+
+        if ($relationType === null) {
+            return [];
+        }
+
+        $operation = self::AGGREGATES[$call->name->toString()];
         $column    = '*';
 
         if (! in_array($operation, ['count', 'exists'], true)) {
             $columnType = $arguments['column'] ?? $arguments[1] ?? null;
 
             if ($columnType === null || count($columnType->getConstantStrings()) !== 1) {
-                return null;
+                return [];
             }
 
             $column = $columnType->getConstantStrings()[0]->getValue();
         }
 
-        $relationNames = $this->constantRelationNames($relations);
+        $relations = $this->constantRelationNames($relationType);
 
-        if ($relationNames === null) {
-            return null;
+        if ($relations === null) {
+            return [];
         }
 
-        // withCount('posts', 'accounts') is variadic only for scalar strings.
-        if ($operation === 'count' && $relations->isString()->yes()) {
+        // Laravel supports the withCount('posts', 'accounts') spelling.
+        if ($operation === 'count' && $relationType->isString()->yes()) {
             foreach ($arguments as $position => $argumentType) {
                 if (! is_int($position) || $position === 0) {
                     continue;
@@ -129,18 +168,18 @@ final class EloquentAggregateModelPropertiesExtension implements DynamicMethodRe
                 $otherNames = $this->constantRelationNames($argumentType);
 
                 if ($otherNames === null) {
-                    return null;
+                    return [];
                 }
 
                 foreach ($otherNames as $name) {
-                    $relationNames[] = $name;
+                    $relations[] = $name;
                 }
             }
         }
 
         $properties = [];
 
-        foreach ($relationNames as $rawName) {
+        foreach ($relations as $rawName) {
             $segments = explode(' ', $rawName);
             $name     = $rawName;
             $alias    = null;
@@ -149,8 +188,6 @@ final class EloquentAggregateModelPropertiesExtension implements DynamicMethodRe
                 [$name, , $alias] = $segments;
             }
 
-            // Laravel aggregates invoke this relation directly; no eager-load
-            // dotted paths, column selections, or malformed alias syntax.
             if ($name === '' || $name !== explode('.', $name, 2)[0] || $name !== explode(':', $name, 2)[0] || preg_replace('/\s/', '', $name) !== $name) {
                 continue;
             }
@@ -182,47 +219,7 @@ final class EloquentAggregateModelPropertiesExtension implements DynamicMethodRe
             };
         }
 
-        if ($properties === []) {
-            return null;
-        }
-
-        // PHPStan cannot usefully intersect two unrelated object shapes.
-        // Merge previously selected columns into a single shape before adding
-        // the next aggregate to the same builder.
-        $baseModel          = $modelType;
-        $existingProperties = [];
-        $optionalProperties = [];
-
-        if (is_a($modelType, IntersectionType::class)) {
-            $parts = [];
-
-            foreach ($modelType->getTypes() as $part) {
-                if (! is_a($part, ObjectShapeType::class)) {
-                    $parts[] = $part;
-                    continue;
-                }
-
-                $existingProperties = array_merge($existingProperties, $part->getProperties());
-                $optionalProperties = array_merge($optionalProperties, $part->getOptionalProperties());
-            }
-
-            if ($parts !== []) {
-                $baseModel = TypeCombinator::intersect(...$parts);
-            }
-        }
-
-        $enriched = TypeCombinator::intersect($baseModel, new ObjectShapeType(
-            array_merge($existingProperties, $properties),
-            $optionalProperties,
-        ));
-
-        return new GenericObjectType(
-            $builderReflection->getName(),
-            [$enriched],
-            null,
-            null,
-            [],
-        );
+        return $properties;
     }
 
     /** @return list<string>|null */
