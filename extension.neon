@@ -32,7 +32,7 @@ parameters:
     generalizeEnvReturnType: false
     checkConfigTypes: false
     checkAuthCallsWhenInRequestScope: false
-    parseModelCastsMethod: false
+    parseModelCastsMethod: true
     enableMigrationCache: true
     checkUniqueJobUniqueFor: false
     checkUniqueJobUniqueId: false
@@ -88,6 +88,10 @@ conditionalTags:
     Larastan\Larastan\Rules\NoUnnecessaryEnumerableToArrayCallsRule:
         phpstan.rules.rule: %noUnnecessaryEnumerableToArrayCalls%
     Larastan\Larastan\Rules\OctaneCompatibilityRule:
+        phpstan.rules.rule: %checkOctaneCompatibility%
+    Larastan\Larastan\Rules\Octane\SingletonBindingScopeRule:
+        phpstan.rules.rule: %checkOctaneCompatibility%
+    Larastan\Larastan\Rules\Octane\SingletonAttributeScopeRule:
         phpstan.rules.rule: %checkOctaneCompatibility%
     Larastan\Larastan\Rules\UnusedViewsRule:
         phpstan.rules.rule: %checkUnusedViews%
@@ -364,6 +368,11 @@ services:
             - phpstan.broker.dynamicMethodReturnTypeExtension
 
     -
+        class: Larastan\Larastan\ReturnTypes\CollectionMultiGroupByReturnTypeExtension
+        tags:
+            - phpstan.broker.dynamicMethodReturnTypeExtension
+
+    -
         class: Larastan\Larastan\ReturnTypes\FactoryDynamicMethodReturnTypeExtension
         tags:
             - phpstan.broker.dynamicMethodReturnTypeExtension
@@ -437,6 +446,15 @@ services:
 
     -
         class: Larastan\Larastan\Rules\OctaneCompatibilityRule
+
+    -
+        class: Larastan\Larastan\Rules\Octane\ScopedDependencyDetector
+
+    -
+        class: Larastan\Larastan\Rules\Octane\SingletonBindingScopeRule
+
+    -
+        class: Larastan\Larastan\Rules\Octane\SingletonAttributeScopeRule
 
     -
         class: Larastan\Larastan\Rules\NoEnvCallsOutsideOfConfigRule
