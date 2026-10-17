@@ -1,0 +1,129 @@
+---
+name: Octane adversarial audit
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  runtime-and-rule-oracle:
+    name: "Runtime and rule oracle, PHP ${{ matrix.php }} Laravel ${{ matrix.laravel }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - php: "8.3"
+            laravel: "^11.42.2"
+          - php: "8.4"
+            laravel: "^12.0"
+          - php: "8.5"
+            laravel: "^13.0"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "${{ matrix.php }}"
+          extensions: "dom, curl, libxml, mbstring, zip, fileinfo"
+          tools: "composer:v2"
+          coverage: none
+      - name: Install dependencies
+        run: composer update --with="laravel/framework:${{ matrix.laravel }}" --no-interaction --no-progress
+      - name: Validate source syntax
+        run: |
+          for file in tests/Rules/OctaneAdversarial*Test.php tests/Rules/data/OctaneAdversarialNativeCases.php; do
+            php -l "$file"
+          done
+      - name: Oracle - Laravel runtime semantics must pass
+        run: ./vendor/bin/phpunit tests/Rules/OctaneAdversarialRuntimeOracleTest.php --colors=never -d memory_limit=1408M
+      - name: Full PHPStan CLI exact diagnostic oracle for native attributes and shared bind
+        if: ${{ matrix.laravel != '^11.42.2' }}
+        shell: bash
+        run: |
+          set +e
+          ./vendor/bin/phpstan analyse -c tests/octane-cli-audit.neon --error-format=json --no-progress --memory-limit=3G > octane-cli.json 2> octane-cli.stderr
+          rc=$?
+          echo "PHPSTAN_EXIT=$rc"
+          if [ "$rc" -gt 1 ]; then
+            cat octane-cli.stderr
+            exit "$rc"
+          fi
+          python3 tests/Rules/scripts/compare_octane_cli.py octane-cli.json
+
+  large-project-ab:
+    name: "Large project A/B - ${{ matrix.repo }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - repo: filamentphp/filament
+            ref: 4fb16cd2bb0446609312b1037dfe03fffc9abf70
+            php: "8.4"
+            config: filamentphp-filament.neon
+          - repo: monicahq/monica
+            ref: 6e6ec217457e946e330ba7cd3b28107f4332c7b1
+            php: "8.3"
+            config: monicahq-monica.neon
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: larastan
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "${{ matrix.php }}"
+          tools: "composer:v2"
+          coverage: none
+      - uses: actions/checkout@v7
+        with:
+          repository: "${{ matrix.repo }}"
+          ref: "${{ matrix.ref }}"
+          path: e2e
+      - name: Install repo under test with exact Larastan checkout
+        working-directory: e2e
+        run: |
+          composer config repositories.0 '{ "type": "path", "url": "../larastan", "options": { "symlink": true } }'
+          composer config minimum-stability dev
+          if [ "${{ matrix.repo }}" = "monicahq/monica" ]; then
+            composer remove --dev -n tomasvotruba/bladestan
+          fi
+          composer require --dev -n --no-progress --update-with-all-dependencies "larastan/larastan:*" "phpstan/phpstan:*"
+      - name: Compare cold analysis 3x with opt-in OFF/ON and cache disabled
+        working-directory: e2e
+        shell: bash
+        run: |
+          set -uo pipefail
+          for mode in off on; do
+            case "$mode" in
+              off) enabled=false ;;
+              on) enabled=true ;;
+            esac
+            cat > "octane-audit-$mode.neon" <<EOF
+          includes:
+            - ../larastan/e2e/${{ matrix.config }}
+          parameters:
+            checkOctaneCompatibility: $enabled
+          EOF
+          done
+          echo "| mode | trial | exit | time seconds | max RSS kB |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---:|---:|---:|---:|" >> "$GITHUB_STEP_SUMMARY"
+          printf 'AUDIT_CSV project,mode,trial,exit,wall_seconds,max_rss_kb\n'
+          for trial in 1 2 3; do
+            for mode in off on; do
+              /usr/bin/time -f '%e %M' -o "octane-$mode-$trial.metrics" ./vendor/bin/phpstan analyse --debug --no-progress --memory-limit=3G -c "octane-audit-$mode.neon" > "octane-$mode-$trial.output" 2>&1
+              rc=$?
+              read -r seconds rss <<< "$(tail -n 1 "octane-$mode-$trial.metrics")"
+              echo "AUDIT_CSV ${{ matrix.repo }},$mode,$trial,$rc,$seconds,$rss"
+              echo "| $mode | $trial | $rc | $seconds | $rss |" >> "$GITHUB_STEP_SUMMARY"
+              tail -n 4 "octane-$mode-$trial.output"
+              if [ "$rc" -gt 1 ]; then
+                echo "PHPStan infrastructure/configuration failure (exit=$rc)" >&2
+                exit "$rc"
+              fi
+            done
+          done
