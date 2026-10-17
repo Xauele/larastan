@@ -32,6 +32,7 @@ final class OctaneExtendedRuntimeOracleTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
         require_once __DIR__ . '/data/OctaneExtendedLifetimeCases.php';
     }
 
@@ -40,9 +41,9 @@ final class OctaneExtendedRuntimeOracleTest extends TestCase
         $previous = Container::getInstance();
 
         try {
-            $app     = new Application();
-            $first   = Request::create('/first');
-            $second  = Request::create('/second');
+            $app    = new Application();
+            $first  = Request::create('/first');
+            $second = Request::create('/second');
             $app->instance('request', $first);
             $app->register(ProviderSingletonMap::class);
 
@@ -86,9 +87,9 @@ final class OctaneExtendedRuntimeOracleTest extends TestCase
         $previous = Container::getInstance();
 
         try {
-            $app     = new Application();
-            $first   = Request::create('/tenant-a');
-            $second  = Request::create('/tenant-b');
+            $app    = new Application();
+            $first  = Request::create('/tenant-a');
+            $second = Request::create('/tenant-b');
             $app->instance('request', $first);
             registerLifetimeCases($app);
 
