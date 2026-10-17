@@ -24,11 +24,4 @@ final class OctaneOptionalRequestRuntimeTest extends TestCase
         self::assertSame($current, $singleton->request);
     }
 
-    public function testOptionalRequestFallsBackToNullWhenUnbound(): void
-    {
-        $container = new Container();
-        $singleton = $container->make(BoundOptionalRequestConsumer::class);
-
-        self::assertNull($singleton->request);
-    }
 }

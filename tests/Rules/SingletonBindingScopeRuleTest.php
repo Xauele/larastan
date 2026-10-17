@@ -72,7 +72,12 @@ final class SingletonBindingScopeRuleTest extends RuleTestCase
         $this->analyse([__DIR__ . '/data/CaptiveScopeNullableRequest.php'], [
             [
                 'Singleton ScopeCompatibilityNullableRequest\\RequiredNullableConsumer captures a scoped dependency: ScopeCompatibilityNullableRequest\\RequiredNullableConsumer -> Illuminate\\Http\\Request.',
-                26,
+                33,
+                'Register the owner as scoped(), or resolve the current context when handling each request/job.',
+            ],
+            [
+                'Singleton ScopeCompatibilityNullableRequest\\OptionalNullableConsumer captures a scoped dependency: ScopeCompatibilityNullableRequest\\OptionalNullableConsumer -> Illuminate\\Http\\Request.',
+                34,
                 'Register the owner as scoped(), or resolve the current context when handling each request/job.',
             ],
             [
