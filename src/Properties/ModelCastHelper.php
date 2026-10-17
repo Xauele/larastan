@@ -389,58 +389,55 @@ class ModelCastHelper
             return $this->parsedCastsMethods[$className];
         }
 
-        $fileName = $declaringClass->getFileName();
+        // The declaring model may import casts() from a trait. In that case
+        // the method body is in the trait's file, not the model's file.
+        // Native method reflection identifies the actual source location.
+        $nativeMethod = $declaringClass->getNativeReflection()->getMethod($castsMethod->getName());
+        $fileName     = $nativeMethod->getFileName();
+        $startLine    = $nativeMethod->getStartLine();
 
-        if ($fileName === null) {
+        if ($fileName === false || $startLine === false) {
             return $this->parsedCastsMethods[$className] = new NullType();
         }
 
         $stmts = $this->parser->parseFile($fileName);
 
-        // Look for the declaring class, not just the first casts() method in
-        // the file. A file can define several models with different casts.
-        foreach ($stmts as $statement) {
-            $namespace = $statement instanceof Node\Stmt\Namespace_ ? $statement->name?->toString() : null;
-            $classes   = $statement instanceof Node\Stmt\Namespace_ ? $statement->stmts : [$statement];
+        // The source line disambiguates classes and traits sharing a file.
+        // If the location is not unique, do not guess the method body.
+        $method = null;
 
-            foreach ($classes as $class) {
-                if (! $class instanceof Node\Stmt\Class_ || $class->name === null) {
-                    continue;
-                }
+        foreach ((new NodeFinder())->findInstanceOf($stmts, Node\Stmt\ClassMethod::class) as $candidate) {
+            if ($candidate->getStartLine() !== $startLine || $candidate->name->toString() !== $castsMethod->getName()) {
+                continue;
+            }
 
-                $candidate = $namespace === null ? $class->name->toString() : $namespace . '\\' . $class->name->toString();
+            if ($method !== null) {
+                return $this->parsedCastsMethods[$className] = new NullType();
+            }
 
-                if ($candidate !== $className) {
-                    continue;
-                }
+            $method = $candidate;
+        }
 
-                foreach ($class->getMethods() as $method) {
-                    if ($method->name->toString() !== $castsMethod->getName()) {
-                        continue;
-                    }
+        if ($method === null) {
+            return $this->parsedCastsMethods[$className] = new NullType();
+        }
 
-                    // Even if the last statement returns a literal array, an
-                    // earlier branch may return different casts. Never guess.
-                    $returns = (new NodeFinder())->findInstanceOf($method->stmts ?? [], Node\Stmt\Return_::class);
+        // Earlier or nested returns can change the casts shape.
+        $returns = (new NodeFinder())->findInstanceOf($method->stmts ?? [], Node\Stmt\Return_::class);
 
-                    if (count($returns) !== 1) {
-                        return $this->parsedCastsMethods[$className] = new NullType();
-                    }
+        if (count($returns) !== 1) {
+            return $this->parsedCastsMethods[$className] = new NullType();
+        }
 
-                    // Only a direct literal return is safe to infer; delegated
-                    // expressions retain their declared return type.
-                    foreach ($method->stmts ?? [] as $bodyStatement) {
-                        if ($bodyStatement instanceof Node\Stmt\Return_ && $bodyStatement->expr instanceof Array_) {
-                            // Resolve self, parent, and $this in the method's declaring class,
-                            // not in a synthetic file-level scope.
-                            $scope = $this->scopeFactory->create(ScopeContext::create($fileName))->enterClass($declaringClass);
+        // Only a direct literal array return is inferred; delegated
+        // expressions retain their declared return type.
+        foreach ($method->stmts ?? [] as $bodyStatement) {
+            if ($bodyStatement instanceof Node\Stmt\Return_ && $bodyStatement->expr instanceof Array_) {
+                // self:: must resolve in the class using the trait, not in
+                // an unrelated file-level or trait-only scope.
+                $scope = $this->scopeFactory->create(ScopeContext::create($fileName))->enterClass($declaringClass);
 
-                            return $this->parsedCastsMethods[$className] = $scope->getType($bodyStatement->expr);
-                        }
-                    }
-
-                    return $this->parsedCastsMethods[$className] = new NullType();
-                }
+                return $this->parsedCastsMethods[$className] = $scope->getType($bodyStatement->expr);
             }
         }
 
