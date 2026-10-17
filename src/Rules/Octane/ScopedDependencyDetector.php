@@ -18,8 +18,9 @@ use function str_replace;
  * Conservative counterpart to .NET DI scope validation.
  *
  * Only required constructor-injected object dependencies with an
- * unambiguous class type are followed, including nullable required classes. Runtime factories, interface bindings
- * and dynamic container aliases are intentionally not guessed.
+ * unambiguous class type are followed, including nullable required classes.
+ * Runtime factories, unresolved interface bindings and dynamic container
+ * aliases are intentionally not guessed.
  *
  * @internal
  */
