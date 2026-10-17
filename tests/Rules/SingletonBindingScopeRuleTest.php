@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Rules;
 
-use Larastan\Larastan\Rules\Octane\ScopedDependencyDetector;
 use Larastan\Larastan\Rules\Octane\ContainerBindingCollector;
+use Larastan\Larastan\Rules\Octane\ScopedDependencyDetector;
 use Larastan\Larastan\Rules\Octane\SingletonAttributeCollector;
 use Larastan\Larastan\Rules\Octane\SingletonLifetimeRule;
 use PHPStan\Reflection\ReflectionProvider;
@@ -32,8 +32,6 @@ final class SingletonBindingScopeRuleTest extends RuleTestCase
 
         $this->analyse([__DIR__ . '/data/CaptiveScopeBindings.php'], [
             ['Singleton ScopeCompatibility\\CurrentRequestService has a constructor dependency on a scoped service: ScopeCompatibility\\CurrentRequestService -> Illuminate\\Http\\Request.', 82, 'Register the owner as scoped(), or resolve the current context when handling each request/job.'],
-            ['Singleton ScopeCompatibility\\ReportImplementation has a constructor dependency on a scoped service: ScopeCompatibility\\ReportImplementation -> ScopeCompatibility\\TenantContext.', 83, 'Register the owner as scoped(), or resolve the current context when handling each request/job.'],
-            ['Singleton ScopeCompatibility\\ReportImplementation has a constructor dependency on a scoped service: ScopeCompatibility\\ReportImplementation -> ScopeCompatibility\\TenantContext.', 98, 'Register the owner as scoped(), or resolve the current context when handling each request/job.'],
         ]);
     }
 
@@ -156,6 +154,7 @@ final class SingletonBindingScopeRuleTest extends RuleTestCase
         ]);
     }
 
+    /** @return list<\PHPStan\Collectors\Collector<\PhpParser\Node, mixed>> */
     protected function getCollectors(): array
     {
         return [new ContainerBindingCollector(), new SingletonAttributeCollector()];

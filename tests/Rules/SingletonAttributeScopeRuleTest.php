@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Rules;
 
-use Larastan\Larastan\Rules\Octane\ScopedDependencyDetector;
 use Larastan\Larastan\Rules\Octane\ContainerBindingCollector;
+use Larastan\Larastan\Rules\Octane\ScopedDependencyDetector;
 use Larastan\Larastan\Rules\Octane\SingletonAttributeCollector;
 use Larastan\Larastan\Rules\Octane\SingletonLifetimeRule;
 use PHPStan\Reflection\ReflectionProvider;
@@ -39,6 +39,7 @@ final class SingletonAttributeScopeRuleTest extends RuleTestCase
         ]);
     }
 
+    /** @return list<\PHPStan\Collectors\Collector<\PhpParser\Node, mixed>> */
     protected function getCollectors(): array
     {
         return [new ContainerBindingCollector(), new SingletonAttributeCollector()];

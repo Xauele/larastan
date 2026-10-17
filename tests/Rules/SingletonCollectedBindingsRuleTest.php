@@ -24,6 +24,7 @@ final class SingletonCollectedBindingsRuleTest extends RuleTestCase
         return new SingletonLifetimeRule(new ScopedDependencyDetector($provider), $provider);
     }
 
+    /** @return list<\PHPStan\Collectors\Collector<\PhpParser\Node, mixed>> */
     protected function getCollectors(): array
     {
         return [new ContainerBindingCollector(), new SingletonAttributeCollector()];

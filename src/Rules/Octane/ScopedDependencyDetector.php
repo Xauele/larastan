@@ -40,6 +40,7 @@ final class ScopedDependencyDetector
 
     /**
      * @param array<string, array{lifetime: 'scoped'|'singleton'|'bind'|'unknown', concrete: string|null}> $bindings
+     *
      * @return non-empty-list<string>|null
      */
     public function findCaptiveDependency(ClassReflection $class, array $bindings = []): array|null
@@ -92,9 +93,9 @@ final class ScopedDependencyDetector
                     continue;
                 }
 
-                $dependency = $dependencies[0];
+                $dependency     = $dependencies[0];
                 $dependencyName = $dependency->getName();
-                $binding = $bindings[$dependencyName] ?? null;
+                $binding        = $bindings[$dependencyName] ?? null;
 
                 // Conflicting or dynamically materialised bindings have no
                 // statically reliable lifetime or constructor.
@@ -118,7 +119,7 @@ final class ScopedDependencyDetector
                     return [...$path, $dependencyName];
                 }
 
-                $target = $dependency;
+                $target   = $dependency;
                 $nextPath = [...$path, $dependencyName];
 
                 // A known interface-to-concrete binding is traversable even
@@ -132,7 +133,7 @@ final class ScopedDependencyDetector
                         continue;
                     }
 
-                    $target = $this->reflectionProvider->getClass($concreteName);
+                    $target     = $this->reflectionProvider->getClass($concreteName);
                     $nextPath[] = $concreteName;
 
                     // A distinct concrete is resolved through Container::resolve()
@@ -161,7 +162,7 @@ final class ScopedDependencyDetector
                 }
 
                 $seen[$name] = true;
-                $queue[] = ['class' => $target, 'path' => $nextPath];
+                $queue[]     = ['class' => $target, 'path' => $nextPath];
             }
         }
 

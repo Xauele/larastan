@@ -59,11 +59,11 @@ final class SingletonLifetimeRule implements Rule
         $bindings = [];
 
         foreach ($registrations as $abstract => $rows) {
-            $methods = [];
+            $methods   = [];
             $concretes = [];
 
             foreach ($rows as $row) {
-                $methods[$row['method']] = true;
+                $methods[$row['method']]           = true;
                 $concretes[$row['concrete'] ?? ''] = true;
             }
 
@@ -74,7 +74,7 @@ final class SingletonLifetimeRule implements Rule
                 continue;
             }
 
-            $method = array_key_first($methods);
+            $method   = array_key_first($methods);
             $concrete = $rows[0]['concrete'];
 
             $lifetime = match ($method) {
@@ -97,6 +97,7 @@ final class SingletonLifetimeRule implements Rule
         foreach ($node->get(SingletonAttributeCollector::class) as $file => $rows) {
             foreach ($rows as [$name, $line]) {
                 $declaredSingletons[$name] = true;
+
                 $lifetime = $bindings[$name]['lifetime'] ?? null;
 
                 if (in_array($lifetime, ['scoped', 'unknown'], true) || ! $this->reflectionProvider->hasClass($name)) {
@@ -104,11 +105,13 @@ final class SingletonLifetimeRule implements Rule
                 }
 
                 $class = $this->reflectionProvider->getClass($name);
-                $path = $this->findPath($class, $bindings, $cachedPaths);
+                $path  = $this->findPath($class, $bindings, $cachedPaths);
 
-                if ($path !== null) {
-                    $errors[] = $this->diagnostic($class, $path, $file, $line, true);
+                if ($path === null) {
+                    continue;
                 }
+
+                $errors[] = $this->diagnostic($class, $path, $file, $line, true);
             }
         }
 
@@ -136,9 +139,11 @@ final class SingletonLifetimeRule implements Rule
 
                 $path = $this->findPath($class, $bindings, $cachedPaths);
 
-                if ($path !== null) {
-                    $errors[] = $this->diagnostic($class, $path, $row['file'], $row['line'], false);
+                if ($path === null) {
+                    continue;
                 }
+
+                $errors[] = $this->diagnostic($class, $path, $row['file'], $row['line'], false);
             }
         }
 
@@ -147,7 +152,8 @@ final class SingletonLifetimeRule implements Rule
 
     /**
      * @param array<string, array{lifetime: 'scoped'|'singleton'|'bind'|'unknown', concrete: string|null}> $bindings
-     * @param array<string, non-empty-list<string>|null> $cachedPaths
+     * @param array<string, non-empty-list<string>|null>                                                   $cachedPaths
+     *
      * @return non-empty-list<string>|null
      */
     private function findPath(ClassReflection $class, array $bindings, array &$cachedPaths): array|null

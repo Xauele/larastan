@@ -23,6 +23,7 @@ use function strtolower;
  * Dynamic abstracts and closures are not interpreted as class constructors.
  *
  * @implements Collector<MethodCall, array{string, string, string|null, int}>
+ *
  * @internal
  */
 final class ContainerBindingCollector implements Collector

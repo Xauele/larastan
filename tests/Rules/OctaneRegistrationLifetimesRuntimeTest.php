@@ -6,14 +6,14 @@ namespace Tests\Rules;
 
 use Illuminate\Container\Container;
 use PHPUnit\Framework\TestCase;
+use ScopeAcrossFiles\AttributeOwner;
 use ScopeAcrossFiles\ContextOwner;
 use ScopeAcrossFiles\DelegateContract;
 use ScopeAcrossFiles\DelegateOwner;
+use ScopeAcrossFiles\OverriddenScopedContext;
+use ScopeAcrossFiles\SafeOwner;
 use ScopeAcrossFiles\ScopedContext;
 use ScopeAcrossFiles\ScopedDelegate;
-use ScopeAcrossFiles\SafeOwner;
-use ScopeAcrossFiles\OverriddenScopedContext;
-use ScopeAcrossFiles\AttributeOwner;
 
 use function class_exists;
 
@@ -25,7 +25,7 @@ final class OctaneRegistrationLifetimesRuntimeTest extends TestCase
         $container->scoped(ScopedContext::class);
         $container->singleton(ContextOwner::class);
 
-        $owner = $container->make(ContextOwner::class);
+        $owner        = $container->make(ContextOwner::class);
         $firstContext = $owner->context;
 
         $this->assertSame($firstContext, $container->make(ScopedContext::class));
@@ -68,8 +68,8 @@ final class OctaneRegistrationLifetimesRuntimeTest extends TestCase
         $container->singleton(SafeOwner::class);
         $container->scoped(AttributeOwner::class);
 
-        $context = $container->make(OverriddenScopedContext::class);
-        $owner = $container->make(SafeOwner::class);
+        $context        = $container->make(OverriddenScopedContext::class);
+        $owner          = $container->make(SafeOwner::class);
         $attributeOwner = $container->make(AttributeOwner::class);
 
         $container->forgetScopedInstances();

@@ -14,6 +14,7 @@ use PHPStan\Node\InClassNode;
  * another analysed service provider may register this class as scoped.
  *
  * @implements Collector<InClassNode, array{string, int}>
+ *
  * @internal
  */
 final class SingletonAttributeCollector implements Collector
