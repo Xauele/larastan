@@ -11,6 +11,7 @@ use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 
 use function class_exists;
 use function count;
+use function strcasecmp;
 use function str_contains;
 use function str_replace;
 
@@ -146,11 +147,17 @@ final class ScopedDependencyDetector
     {
         // Match native Laravel lifetime policy: missing attribute classes on
         // Laravel 11 are not active attributes, and PHP Reflection resolves
-        // case variants and use-aliases with its filtered getAttributes().
+        // case variants and use-aliases with its getAttributes() and a case-insensitive name comparison.
         if (! class_exists($attribute)) {
             return false;
         }
 
-        return $class->getNativeReflection()->getAttributes($attribute) !== [];
+        foreach ($class->getNativeReflection()->getAttributes() as $reflectionAttribute) {
+            if (strcasecmp($reflectionAttribute->getName(), $attribute) === 0) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
