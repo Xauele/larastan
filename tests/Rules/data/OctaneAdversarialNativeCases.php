@@ -6,16 +6,18 @@ namespace OctaneAdversarialNativeCases;
 
 use Illuminate\Container\Attributes\Scoped;
 use Illuminate\Container\Attributes\Singleton;
+use Illuminate\Container\Attributes\sCoPeD as MixedScoped;
+use Illuminate\Container\Attributes\sInGlEtOn as MixedSingleton;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Http\Request;
 
-#[sCoPeD]
+#[MixedScoped]
 final class MixedCaseScopedContext {}
 
 #[Scoped]
 final class StandardScopedContext {}
 
-#[sInGlEtOn]
+#[MixedSingleton]
 final class MixedCaseSingleton
 {
     public function __construct(public MixedCaseScopedContext $context) {}
@@ -27,7 +29,7 @@ final class StandardSingletonMixedCaseScope
     public function __construct(public MixedCaseScopedContext $context) {}
 }
 
-#[sInGlEtOn]
+#[MixedSingleton]
 final class MixedCaseSingletonStandardScope
 {
     public function __construct(public StandardScopedContext $context) {}
