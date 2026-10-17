@@ -103,6 +103,29 @@ final class SingletonBindingScopeRuleTest extends RuleTestCase
         ]);
     }
 
+    public function testNativeSymfonyRequestAliasIsBoundToCurrentRequest(): void
+    {
+        // Laravel Application aliases Symfony's base Request to 'request'.
+        // Do not apply that special case to arbitrary Symfony-only subclasses.
+        $this->analyse([__DIR__ . '/data/CaptiveScopeSymfonyRequest.php'], [
+            [
+                'Singleton ScopeCompatibilitySymfonyRequest\\SymfonyAliasConsumer has a constructor dependency on a scoped service: ScopeCompatibilitySymfonyRequest\\SymfonyAliasConsumer -> Symfony\\Component\\HttpFoundation\\Request.',
+                51,
+                'Register the owner as scoped(), or resolve the current context when handling each request/job.',
+            ],
+            [
+                'Singleton ScopeCompatibilitySymfonyRequest\\TransitiveConsumer has a constructor dependency on a scoped service: ScopeCompatibilitySymfonyRequest\\TransitiveConsumer -> ScopeCompatibilitySymfonyRequest\\DependencyWrapper -> Symfony\\Component\\HttpFoundation\\Request.',
+                52,
+                'Register the owner as scoped(), or resolve the current context when handling each request/job.',
+            ],
+            [
+                'Singleton ScopeCompatibilitySymfonyRequest\\OptionalSymfonyAliasConsumer has a constructor dependency on a scoped service: ScopeCompatibilitySymfonyRequest\\OptionalSymfonyAliasConsumer -> Symfony\\Component\\HttpFoundation\\Request.',
+                54,
+                'Register the owner as scoped(), or resolve the current context when handling each request/job.',
+            ],
+        ]);
+    }
+
     /** @return list<string> */
     public static function getAdditionalConfigFiles(): array
     {
