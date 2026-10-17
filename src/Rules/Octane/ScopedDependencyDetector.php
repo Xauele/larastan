@@ -128,11 +128,11 @@ final class ScopedDependencyDetector
 
     private function isScoped(ClassReflection $class): bool
     {
-        // Request subclasses have a request lifetime even without #[Scoped].
-        // Laravel's Application aliases both concrete base Request classes to
-        // the per-request 'request' binding (Laravel 11, 12 and 13).
-        // Arbitrary Symfony subclasses do NOT share that container alias.
-        return $class->is(Request::class)
+        // Laravel aliases only the exact Illuminate and Symfony base
+        // Request classes to its per-request 'request' binding. An unbound
+        // subclass of either is not automatically the active request.
+        // Explicit #[Scoped] subclasses remain covered.
+        return $class->getName() === Request::class
             || $class->getName() === SymfonyRequest::class
             || $this->hasAttribute($class, 'Illuminate\Container\Attributes\Scoped');
     }
