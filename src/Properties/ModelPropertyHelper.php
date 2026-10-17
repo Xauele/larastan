@@ -128,10 +128,20 @@ class ModelPropertyHelper
             $propertyName === $modelInstance->getKeyName()
             && (! array_key_exists($tableName, $this->tables) || ! array_key_exists($propertyName, $this->tables[$tableName]->columns))
         ) {
+            // Even without migration metadata, Laravel applies explicit id
+            // casts when reading or writing the primary-key attribute.
+            // Only fall back to Model::getKeyType() if no cast is present.
+            $keyType = $this->stringResolver->resolve($modelInstance->getKeyType());
+            $cast    = $this->modelCastHelper->getCastForProperty($classReflection, $propertyName);
+
+            if ($cast === null) {
+                return new ModelProperty($classReflection, $keyType, $keyType);
+            }
+
             return new ModelProperty(
                 $classReflection,
-                $this->stringResolver->resolve($modelInstance->getKeyType()),
-                $this->stringResolver->resolve($modelInstance->getKeyType()),
+                $this->modelCastHelper->getReadableType($cast, $keyType),
+                $this->modelCastHelper->getWriteableType($cast, $keyType),
             );
         }
 
