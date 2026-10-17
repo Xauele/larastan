@@ -73,6 +73,7 @@ jobs:
       - name: Repeated cold no-cache stress A/B, 3 trials each
         shell: bash
         run: |
+          set +e
           set -uo pipefail
           echo "| mode | trial | exit | warning matches | time seconds | max RSS kB |" >> "$GITHUB_STEP_SUMMARY"
           echo "|---|---:|---:|---:|---:|---:|" >> "$GITHUB_STEP_SUMMARY"
