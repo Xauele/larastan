@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Stringable;
 use function PHPStan\Testing\assertType;
 
-function test(ModelWithCasts $model, OtherModelWithCasts $other, ConditionalModelWithCasts $conditional, DynamicValueModelWithCasts $dynamic, PartiallyDynamicModelWithCasts $partial, PhpDocUnknownCastsModel $annotated, PhpDocOptionalCastsModel $optional, SelfConstantCastsModel $self, ChildInheritedCastsModel $inherited, LateStaticOverrideCastsModel $lateBound, DynamicKeyCastsModel $dynamicKey, TimestampStringCastsModel $timestamp): void
+function test(ModelWithCasts $model, OtherModelWithCasts $other, ConditionalModelWithCasts $conditional, DynamicValueModelWithCasts $dynamic, PartiallyDynamicModelWithCasts $partial, PhpDocUnknownCastsModel $annotated, PhpDocOptionalCastsModel $optional, SelfConstantCastsModel $self, ChildInheritedCastsModel $inherited, LateStaticOverrideCastsModel $lateBound, DynamicKeyCastsModel $dynamicKey, TimestampStringCastsModel $timestamp, CastedKeyWithoutSchemaModel $keyed): void
 {
     assertType('bool', $model->integer);
     assertType(Stringable::class, $model->string);
@@ -48,6 +48,19 @@ function test(ModelWithCasts $model, OtherModelWithCasts $other, ConditionalMode
 
     // Laravel prioritizes casts() over the conventional date conversion.
     assertType('string|null', $timestamp->created_at);
+
+    // An explicit id cast applies even when the migration has no table.
+    assertType('string', $keyed->id);
+}
+
+class CastedKeyWithoutSchemaModel extends Model
+{
+    protected $table = 'native_casted_key_without_migration';
+
+    protected function casts(): array
+    {
+        return ['id' => 'string'];
+    }
 }
 
 class TimestampStringCastsModel extends Model

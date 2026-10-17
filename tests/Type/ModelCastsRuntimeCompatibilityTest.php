@@ -16,6 +16,14 @@ final class ModelCastsRuntimeCompatibilityTest extends TestCase
         self::assertSame('string', $model->getCasts()['integer']);
     }
 
+    public function testExplicitPrimaryKeyCastAppliesWithoutMigrationSchema(): void
+    {
+        $model = new DynamicCastPrecedenceModel();
+        $model->setRawAttributes(['id' => 123]);
+
+        self::assertSame('123', $model->getAttribute('id'));
+    }
+
     public function testExplicitStringCastWinsOverAutomaticTimestampHandling(): void
     {
         $model = new DynamicCastPrecedenceModel();

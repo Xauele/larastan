@@ -19,7 +19,7 @@ final class DynamicCastPrecedenceModel extends Model
     /** @return array<string, string> */
     protected function casts(): array
     {
-        return ['integer' => $this->selectCast(), 'created_at' => 'string'];
+        return ['integer' => $this->selectCast(), 'created_at' => 'string', 'id' => 'string'];
     }
 
     private function selectCast(): string
