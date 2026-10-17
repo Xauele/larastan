@@ -13,9 +13,9 @@ use PHPStan\Node\InClassNode;
  * Attribute singleton checks must run after binding collection, not per file:
  * another analysed service provider may register this class as scoped.
  *
- * @implements Collector<InClassNode, array{string, int}>
- *
  * @internal
+ *
+ * @implements Collector<InClassNode, array{string, int}>
  */
 final class SingletonAttributeCollector implements Collector
 {

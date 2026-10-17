@@ -22,9 +22,9 @@ use function strtolower;
  * Collect statically known container registrations across analysed files.
  * Dynamic abstracts and closures are not interpreted as class constructors.
  *
- * @implements Collector<MethodCall, array{string, string, string|null, int}>
- *
  * @internal
+ *
+ * @implements Collector<MethodCall, array{string, string, string|null, int}>
  */
 final class ContainerBindingCollector implements Collector
 {
