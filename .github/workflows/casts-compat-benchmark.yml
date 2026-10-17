@@ -1,0 +1,118 @@
+name: "Fork-only casts() comparative benchmark"
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/casts-compat-benchmark.yml"
+
+jobs:
+  benchmark:
+    name: "${{ matrix.repository }} | PHP ${{ matrix.php-version }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - repository: monicahq/monica
+            ref: 6e6ec217457e946e330ba7cd3b28107f4332c7b1
+            php-version: "8.3"
+            config: monicahq-monica.neon
+            force-phpstan: "false"
+          - repository: filamentphp/filament
+            ref: 4fb16cd2bb0446609312b1037dfe03fffc9abf70
+            php-version: "8.4"
+            config: filamentphp-filament.neon
+            force-phpstan: "true"
+
+    steps:
+      - name: Checkout Larastan feature tree
+        uses: actions/checkout@v7
+        with:
+          path: larastan
+
+      - name: Install PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "${{ matrix.php-version }}"
+          coverage: none
+
+      - name: Checkout pinned Laravel project
+        uses: actions/checkout@v7
+        with:
+          repository: "${{ matrix.repository }}"
+          ref: "${{ matrix.ref }}"
+          path: e2e
+
+      - name: Install real-project dependencies
+        run: |
+          set -euo pipefail
+          cd e2e
+          composer config repositories.0 '{ "type": "path", "url": "../larastan", "options": { "symlink": true } }'
+          composer config minimum-stability dev
+          if [ "${{ matrix.repository }}" = "monicahq/monica" ]; then
+            composer remove --dev -n tomasvotruba/bladestan
+          fi
+          if [ "${{ matrix.force-phpstan }}" = "true" ]; then
+            composer require --dev --no-progress --update-with-all-dependencies "larastan/larastan:*" "phpstan/phpstan:*"
+          else
+            composer require --dev --no-progress --update-with-all-dependencies "larastan/larastan:*"
+          fi
+
+      - name: Measure cold-cache A/B/B/A/A/B runs
+        working-directory: e2e
+        env:
+          BENCH_CONFIG: "${{ matrix.config }}"
+        run: |
+          set -euo pipefail
+          mkdir -p ../larastan/.casts-bench
+          cat > ../larastan/e2e/casts-bench-on.neon <<EOF
+          includes:
+              - $BENCH_CONFIG
+          parameters:
+              parseModelCastsMethod: true
+              tmpDir: /tmp/larastan-casts-perf-cache
+          EOF
+          cat > ../larastan/e2e/casts-bench-off.neon <<EOF
+          includes:
+              - $BENCH_CONFIG
+          parameters:
+              parseModelCastsMethod: false
+              tmpDir: /tmp/larastan-casts-perf-cache
+          EOF
+          echo "mode,trial,elapsed_seconds,max_rss_kb,exit_code,output_sha256" > ../larastan/.casts-bench/measurements.csv
+          modes=(on off off on on off)
+          trial=0
+          for mode in "${modes[@]}"; do
+            trial=$((trial + 1))
+            rm -rf /tmp/larastan-casts-perf-cache
+            config="../larastan/e2e/casts-bench-$mode.neon"
+            output="../larastan/.casts-bench/output-$mode-$trial.txt"
+            timing="../larastan/.casts-bench/timing-$mode-$trial.txt"
+            set +e
+            /usr/bin/time -f '%e,%M' -o "$timing" composer exec phpstan analyse -- --no-progress -c "$config" > "$output" 2>&1
+            status=$?
+            set -e
+            values=$(cat "$timing")
+            digest=$(sha256sum "$output" | cut -d' ' -f1)
+            echo "$mode,$trial,$values,$status,$digest" >> ../larastan/.casts-bench/measurements.csv
+            echo "$mode trial $trial: $values (exit $status)"
+            tail -n 6 "$output"
+          done
+          echo "### Cold-cache casts() on/off comparison" >> "$GITHUB_STEP_SUMMARY"
+          echo "Pinned project: ${{ matrix.repository }} at ${{ matrix.ref }}." >> "$GITHUB_STEP_SUMMARY"
+          echo "Six serial A/B/B/A/A/B measurements, cache removed before each run." >> "$GITHUB_STEP_SUMMARY"
+          echo "| Mode | Trial | Seconds | Max RSS (KB) | Exit |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---:|---:|---:|---:|" >> "$GITHUB_STEP_SUMMARY"
+          tail -n +2 ../larastan/.casts-bench/measurements.csv | while IFS=, read -r mode trial sec rss status rest; do
+            echo "| $mode | $trial | $sec | $rss | $status |" >> "$GITHUB_STEP_SUMMARY"
+          done
+          cat ../larastan/.casts-bench/measurements.csv
+
+      - name: Upload measurements and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: "casts-benchmark-${{ matrix.php-version }}"
+          path: larastan/.casts-bench/
+          retention-days: 7
