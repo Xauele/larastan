@@ -28,7 +28,7 @@ final class OctaneBindingRegistrationRegressionTest extends RuleTestCase
         $this->analyse([__DIR__ . '/data/CaptiveScopeRegistrationOverrides.php'], [
             [
                 'Singleton ScopeCompatibilityRegistrationOverrides\\PlainCapturingSingleton has a constructor dependency on a scoped service: ScopeCompatibilityRegistrationOverrides\\PlainCapturingSingleton -> ScopeCompatibilityRegistrationOverrides\\PlainContext.',
-                34,
+                36,
                 'Register the owner as scoped(), or resolve the current context when handling each request/job.',
             ],
         ]);
