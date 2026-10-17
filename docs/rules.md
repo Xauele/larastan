@@ -310,6 +310,13 @@ dynamic names, conditional branches, factories and runtime `singletonIf()`
 short-circuiting may still affect the final container state. These warnings
 are therefore potential mismatches, not a proof of final binding state.
 
+In analysed service-provider classes, literal public `$bindings` and
+`$singletons` maps are also collected, including `$singletons = [Service::class]`.
+This matches Laravel's native `Application::register()` behavior but does
+not prove that a provider is registered or executed in the final application;
+these remain *potential* static diagnostics. Computed, protected, private, or
+non-class entries are skipped without executing provider constructors.
+
 A known interface-to-concrete binding can be traversed for constructor
 dependencies. An unbound interface, an unresolvable factory, and transitive
 paths through vendor code are deliberately skipped. For an unknown factory,
