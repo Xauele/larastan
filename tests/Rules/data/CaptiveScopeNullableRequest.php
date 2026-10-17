@@ -23,7 +23,7 @@ final class OptionalNullableConsumer
 
 final class BoundOptionalRequestConsumer
 {
-    public function __construct(?Request $request = null)
+    public function __construct(public ?Request $request = null)
     {
     }
 }
