@@ -34,5 +34,26 @@ jobs:
         run: composer update --with='laravel/framework:^13.0' --no-interaction --no-progress
       - name: Real runtime behavior of an attributed root factory
         run: ./vendor/bin/phpunit tests/Rules/OctaneFactoryRootAuditRuntimeTest.php --colors=never
+      - name: Verify real PHPStan CLI emits both false positives
+        run: |
+          set +e
+          ./vendor/bin/phpstan analyse -c tests/octane-factory-root-audit.neon --error-format=json --no-progress --memory-limit=3G > /tmp/factory-root-cli.json
+          rc=$?
+          set -e
+          test "$rc" -eq 1
+          python3 - <<'PY'
+          import json
+          import re
+          from pathlib import Path
+          data = json.loads(Path('/tmp/factory-root-cli.json').read_text())
+          messages = [m['message'] for f in data['files'].values() for m in f['messages']]
+          names = set()
+          for m in messages:
+              match = re.match(r'Singleton (ScopeFactoryRootAudit\\\\[^ ]+) has a constructor dependency', m)
+              if match:
+                  names.add(match.group(1).split('\\\\')[-1])
+          print('ACTUAL ROOT DIAGNOSTICS', sorted(names))
+          assert {'FactoryRoot', 'ClassMappedRoot', 'RealRoot'} <= names, messages
+          PY
       - name: "Full PHPStan RuleTestCase suite: should be RED on missed root factory"
         run: composer run-script test:unit
