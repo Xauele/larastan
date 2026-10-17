@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
-"""Kill known semantic mutants; validate that regression tests are sensitive.
+"""Require semantic RED for four native PHPStan/Laravel regression mutants.
 
-Mutations happen only inside the ephemeral CI checkout and are restored in
-finally blocks. Syntax errors or PHP crashes do NOT count as a killed mutant.
+Run PHPStan's real CLI on an isolated fixture: PHPStan's class.nameCase errors
+are part of the exact oracle, rather than invisibly suppressed by RuleTestCase.
+A crash or parse error is never counted as a killed mutant.
 """
+import json
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 
 root = Path(__file__).resolve().parents[3]
 detector = root / "src/Rules/Octane/ScopedDependencyDetector.php"
 binding = root / "src/Rules/Octane/SingletonBindingScopeRule.php"
-attr_test = "tests/Rules/OctaneAdversarialAttributeCaseRuleTest.php"
-bind_test = "tests/Rules/OctaneAdversarialBindingRuleTest.php"
 depth_test = "tests/Rules/SingletonBindingScopeRuleTest.php"
 
 
@@ -20,66 +21,94 @@ def run(*args):
     return subprocess.run(args, cwd=root, text=True, capture_output=True, check=False)
 
 
-def ensure_baseline(test_file):
-    r = run("php", "vendor/bin/phpunit", test_file, "--colors=never")
-    if r.returncode != 0:
-        print("BASELINE_FAILED", test_file, r.stdout[-3000:], r.stderr[-1000:])
-        raise RuntimeError("baseline test is not green; cannot perform mutation testing")
+def cli_result():
+    result = run(
+        "php", "vendor/bin/phpstan", "analyse",
+        "-c", "tests/octane-cli-audit.neon",
+        "--error-format=json", "--no-progress", "--memory-limit=3G",
+    )
+    if result.returncode != 1:
+        raise RuntimeError(
+            f"PHPStan unexpected exit {result.returncode}: {result.stderr[-1400:]}"
+        )
+    try:
+        json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("PHPStan did not return parseable JSON") from exc
+    with tempfile.TemporaryDirectory() as temp:
+        output = Path(temp) / "phpstan.json"
+        output.write_text(result.stdout)
+        verdict = run(
+            sys.executable,
+            "tests/Rules/scripts/compare_octane_cli.py",
+            str(output),
+        )
+    return verdict
 
 
-def kill(name, path, before, after, test_file):
+def ensure_baselines():
+    baseline = cli_result()
+    if baseline.returncode != 0:
+        raise RuntimeError("CLI baseline RED before mutation: " + baseline.stdout[-2800:])
+    phpunit = run("php", "vendor/bin/phpunit", depth_test, "--colors=never")
+    if phpunit.returncode != 0:
+        raise RuntimeError("Depth baseline RED before mutation: " + phpunit.stdout[-2400:])
+    print("MUTATION_BASELINE_PASS: real PHPStan CLI and deep-chain PHPUnit")
+
+
+def kill(name, path, before, after, mode):
     original = path.read_text()
     if original.count(before) != 1:
-        raise RuntimeError(f"mutation {name}: expected source anchor appears {original.count(before)} times")
+        raise RuntimeError(
+            f"{name}: expected exactly one mutation anchor, got {original.count(before)}"
+        )
     try:
         path.write_text(original.replace(before, after, 1))
         syntax = run("php", "-l", str(path))
         if syntax.returncode != 0:
-            raise RuntimeError(f"mutation {name}: syntax invalid; not a valid kill")
-        r = run("php", "vendor/bin/phpunit", test_file, "--colors=never")
-        mismatch = "Failed asserting that two strings are identical." in r.stdout
-        if r.returncode != 1 or not mismatch:
-            print("MUTANT_SURVIVED_OR_INVALID", name, "exit", r.returncode, r.stdout[-3500:], r.stderr[-1500:])
-            raise RuntimeError(f"mutation {name}: sensitive semantic assertion did not reject mutant")
-        print("MUTANT_KILLED", name, "by", test_file)
+            raise RuntimeError(name + ": syntax invalid (not a valid semantic kill)")
+        if mode == "cli":
+            verdict = cli_result()
+            if verdict.returncode != 1 or '"missed": []' in verdict.stdout:
+                raise RuntimeError(
+                    name + ": CLI mutation did not produce a missed-diagnostic RED: "
+                    + verdict.stdout[-2600:]
+                )
+        elif mode == "depth":
+            verdict = run("php", "vendor/bin/phpunit", depth_test, "--colors=never")
+            if verdict.returncode != 1 or "Failed asserting that two strings are identical." not in verdict.stdout:
+                raise RuntimeError(name + ": depth mutation not rejected semantically: " + verdict.stdout[-2000:])
+        else:
+            raise ValueError(mode)
+        print("MUTANT_KILLED", name, "oracle", mode)
     finally:
         path.write_text(original)
 
 
-ensure_baseline(attr_test)
-ensure_baseline(bind_test)
-ensure_baseline(depth_test)
+ensure_baselines()
 
-a = detector.read_text()
-b = binding.read_text()
+original_detector = detector.read_text()
+original_binding = binding.read_text()
 kill(
-    "disable-native-attribute-detection",
-    detector,
+    "disable-native-attribute-detection", detector,
     "if (strcasecmp($reflectionAttribute->getName(), $attribute) === 0) {",
-    "if (false) {",
-    attr_test,
+    "if (false) {", "cli",
 )
 kill(
-    "regress-to-case-sensitive-attribute-names",
-    detector,
+    "regress-case-insensitive-native-attribute-policy", detector,
     "strcasecmp($reflectionAttribute->getName(), $attribute) === 0",
-    "$reflectionAttribute->getName() === $attribute",
-    attr_test,
+    "$reflectionAttribute->getName() === $attribute", "cli",
 )
 kill(
-    "disable-shared-bind-discovery",
-    binding,
-    """return $shared instanceof Node\\Expr\\ConstFetch
-            && strtolower($shared->name->toString()) === 'true';""",
-    "return false;",
-    bind_test,
+    "disable-shared-bind-inference", binding,
+    "return $shared instanceof Node\\Expr\\ConstFetch\n            && strtolower($shared->name->toString()) === 'true';",
+    "return false;", "cli",
 )
 kill(
-    "truncate-all-transitive-dependency-chains",
-    detector,
+    "disable-transitive-graph-traversal", detector,
     "private const MAX_DEPTH = 8;",
-    "private const MAX_DEPTH = 1;",
-    depth_test,
+    "private const MAX_DEPTH = 1;", "depth",
 )
-assert detector.read_text() == a and binding.read_text() == b
-print("MUTATION_GATE_PASS: 4/4 intentional semantic regressions rejected; all files restored")
+if detector.read_text() != original_detector or binding.read_text() != original_binding:
+    raise RuntimeError("Mutated repository files were not restored")
+print("MUTATION_GATE_PASS: 4/4 independent semantic regressions detected and restored")
