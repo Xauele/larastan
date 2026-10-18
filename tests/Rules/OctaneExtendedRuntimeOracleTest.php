@@ -76,6 +76,7 @@ final class OctaneExtendedRuntimeOracleTest extends TestCase
             } else {
                 self::assertInstanceOf(ContextFromScopedBinding::class, $unboundOptional->context);
             }
+
             registerLifetimeCases($app);
 
             $context = $app->make(ContextFromScopedBinding::class);
