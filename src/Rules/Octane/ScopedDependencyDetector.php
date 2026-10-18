@@ -11,6 +11,7 @@ use PHPStan\Type\TypeCombinator;
 use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 
 use function array_slice;
+use function class_exists;
 use function count;
 use function str_contains;
 use function str_replace;
@@ -274,6 +275,13 @@ final class ScopedDependencyDetector
 
     private function hasAttribute(ClassReflection $class, string $attribute): bool
     {
+        // Laravel 11 does not define native lifetime attribute classes.
+        // Reflection exposes unresolved source annotations anyway, but these
+        // cannot affect Container::isShared() at runtime.
+        if (! class_exists($attribute)) {
+            return false;
+        }
+
         // Attribute names are case-insensitive in PHP. Compare resolved
         // names exactly as Laravel's named ReflectionClass lookup does.
         foreach ($class->getNativeReflection()->getAttributes() as $reflectionAttribute) {

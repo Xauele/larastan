@@ -9,6 +9,7 @@ use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
 use PHPStan\Node\InClassNode;
 
+use function class_exists;
 use function strcasecmp;
 
 /**
@@ -32,6 +33,12 @@ final class SingletonAttributeCollector implements Collector
         $class = $node->getClassReflection();
 
         if ($class->isInterface() || $class->isAbstract()) {
+            return null;
+        }
+
+        // Unknown native lifetime attribute classes (Laravel 11) must not
+        // be treated as active Container lifetime declarations.
+        if (! class_exists('Illuminate\\Container\\Attributes\\Singleton')) {
             return null;
         }
 
