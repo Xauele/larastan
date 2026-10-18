@@ -47,9 +47,12 @@ definitely_captive = {
     "ProviderSharedOwner",
     "OptionalBoundConsumer",
     "InterfaceOnlyOwner",
+    "BaselineNativeSingleton",
 }
+# BaselineNativeSingleton is also registered explicitly through singleton()
+# on Laravel 11: this is a real captive lifetime even without the attribute.
 if laravel_major >= 12:
-    definitely_captive.update({"BaselineNativeSingleton", "AttributeOwnerOverriddenToTransient"})
+    definitely_captive.add("AttributeOwnerOverriddenToTransient")
 definitely_not_captive_under_selected_binding = {
     "OwnerWithExplicitlySharedDependency",
     "BaselineTransient",
@@ -57,7 +60,6 @@ definitely_not_captive_under_selected_binding = {
 if laravel_major == 11:
     definitely_not_captive_under_selected_binding.update({
         "AttributeOwnerOverriddenToTransient",
-        "BaselineNativeSingleton",
         "ConstructorOnlyOwner",
     })
 # Expected by the documented conservative rule, even though it never
@@ -70,9 +72,7 @@ result = {
     "missed_true_captures": sorted(definitely_captive - reported),
     "binding_override_warnings": sorted(definitely_not_captive_under_selected_binding & reported),
     "warnings_on_constructor_only_nonretention": sorted(policy_only_potential & reported),
-    "passing_positive_controls": sorted(reported & (
-        {"BaselineNativeSingleton"} if laravel_major >= 12 else {"ProviderSharedOwner"}
-    )),
+    "passing_positive_controls": sorted(reported & {"BaselineNativeSingleton"}),
     "passing_negative_controls": sorted({"BaselineTransient"} - reported),
 }
 print("ORACLE_JSON", json.dumps(result, sort_keys=True))
