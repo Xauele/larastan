@@ -90,8 +90,14 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           from statistics import median
-          off = [list(map(float, Path(f'off-{i}.metrics').read_text().split())) for i in range(1, 4)]
-          on = [list(map(float, Path(f'on-{i}.metrics').read_text().split())) for i in range(1, 4)]
+          def read_metrics(mode, trial):
+              # GNU time prefixes a message for expected PHPStan exit code 1.
+              # Only the last line is the configured '%e %M' numeric record.
+              fields = Path(f'{mode}-{trial}.metrics').read_text().strip().splitlines()[-1].split()
+              assert len(fields) == 2, fields
+              return tuple(map(float, fields))
+          off = [read_metrics('off', i) for i in range(1, 4)]
+          on = [read_metrics('on', i) for i in range(1, 4)]
           base_seconds = median(x[0] for x in off)
           enabled_seconds = median(x[0] for x in on)
           rss_delta_kb = max(x[1] for x in on) - max(x[1] for x in off)
