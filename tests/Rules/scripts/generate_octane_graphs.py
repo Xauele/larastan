@@ -5,7 +5,12 @@ Generators are deliberately small and fixed; no dependency on Faker or
 nondeterministic source ordering. The ground truth comes from the chosen graph.
 """
 import json
+import os
 from pathlib import Path
+
+SCALE = int(os.environ.get('OCTANE_GRAPH_SCALE', '1'))
+if SCALE not in (1, 2, 4, 8):
+    raise ValueError('OCTANE_GRAPH_SCALE must be 1, 2, 4 or 8')
 
 repo = Path(__file__).resolve().parents[3]
 fixture = repo / "tests/Rules/data/OctaneGeneratedGraphStress.php"
@@ -32,26 +37,26 @@ def add_root(name, dependency, detected):
     if detected:
         expected.add(name)
 
-for i in range(200):
+for i in range(200 * SCALE):
     add_root(f"Direct{i:04}", "Request", True)
-for i in range(160):
+for i in range(160 * SCALE):
     prefix = f"Chain{i:04}"
     for j in reversed(range(1, 4)):
         add(f"{prefix}Node{j}", "Request" if j == 3 else f"{prefix}Node{j+1}")
     add_root(f"{prefix}Root", f"{prefix}Node1", True)
-for i in range(200):
+for i in range(200 * SCALE):
     add_root(f"Safe{i:04}", "\\stdClass", False)
-for i in range(100):
+for i in range(100 * SCALE):
     prefix = f"Cycle{i:04}"
     add(f"{prefix}A", f"{prefix}B")
     add(f"{prefix}B", f"{prefix}A")
     add_root(f"{prefix}Root", f"{prefix}A", False)
-for i in range(30):
+for i in range(30 * SCALE):
     prefix = f"AtLimit{i:04}"
     for j in reversed(range(1, 7)):
         add(f"{prefix}Node{j}", "Request" if j == 6 else f"{prefix}Node{j+1}")
     add_root(f"{prefix}Root", f"{prefix}Node1", True)
-for i in range(30):
+for i in range(30 * SCALE):
     prefix = f"BeyondLimit{i:04}"
     for j in reversed(range(1, 8)):
         add(f"{prefix}Node{j}", "Request" if j == 7 else f"{prefix}Node{j+1}")

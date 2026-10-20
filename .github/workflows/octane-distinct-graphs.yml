@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   seeded-graphs:
-    name: "722 distinct singleton registrations; 422 positive diagnoses"
+    name: "2882 distinct registrations; 1682 positive diagnoses (4x)"
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -26,7 +26,8 @@ jobs:
       - name: Deterministically generate unique code graphs
         run: |
           python3 -m py_compile tests/Rules/scripts/generate_octane_graphs.py tests/Rules/scripts/compare_octane_graphs.py
-          python3 tests/Rules/scripts/generate_octane_graphs.py
+          OCTANE_GRAPH_SCALE=4 python3 tests/Rules/scripts/generate_octane_graphs.py
+          python3 -c 'import json; x=json.load(open("tests/octane-generated-graph-oracle.json")); assert x["total_registrations"] == 2882 and len(x["expected"]) == 1682, x'
           php -l tests/Rules/data/OctaneGeneratedGraphStress.php
           php -l tests/Rules/scripts/octane_wide_runtime.php
       - name: Actual Laravel confirms both permutations retain old request
@@ -83,3 +84,19 @@ jobs:
               fi
             done
           done
+      - name: Enforce 4x graph overhead contract (paired median and peak RSS)
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from statistics import median
+          off = [list(map(float, Path(f'off-{i}.metrics').read_text().split())) for i in range(1, 4)]
+          on = [list(map(float, Path(f'on-{i}.metrics').read_text().split())) for i in range(1, 4)]
+          base_seconds = median(x[0] for x in off)
+          enabled_seconds = median(x[0] for x in on)
+          rss_delta_kb = max(x[1] for x in on) - max(x[1] for x in off)
+          factor = enabled_seconds / base_seconds
+          print(f'4X_GRAPH_RESOURCE_PROOF median_factor={factor:.3f} rss_delta_kb={rss_delta_kb:.0f}')
+          assert factor <= 1.5, f'Octane analysis exceeded 1.5x cold-cache median: {factor:.3f}x'
+          assert rss_delta_kb <= 102400, f'Octane analysis exceeded +100 MiB peak RSS: {rss_delta_kb:.0f} kB'
+          PY
