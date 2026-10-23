@@ -250,9 +250,8 @@ from the item type.
 
 ## Multi-level collection grouping
 
-When `Illuminate\Support\Collection::groupBy()` receives a fixed array of two to eight
-grouping selectors, Larastan infers the number of nested group levels and
-retains the type of each item rather than falling back to `mixed`.
+For a fixed list of grouping selectors, Larastan infers the nested collection
+levels and retains the original item type.
 
 ```php
 /** @var \Illuminate\Support\Collection<int, array{region: string, city: string}> $rows */
@@ -260,17 +259,9 @@ $groups = $rows->groupBy(['region', 'city']);
 // Collection<array-key, Collection<array-key, Collection<int, array{region: string, city: string}>>>
 ```
 
-The `preserveKeys` argument controls the keys of the innermost collection.
-Eloquent collections retain the model type in the leaf collection, with
-outer groups represented by Support collections because Eloquent converts
-mapped non-model values into Support collections.
-
-Dynamic selector lists, optional array keys, one selector, more than eight
-selectors, and custom collection subclasses continue to use the existing
-Laravel/PHPStan return types. Two-element callable arrays such as
-`[Callback::class, 'method']` also keep the framework type: Laravel treats them
-as **one callback**, not two grouping levels. This avoids guessing types where
-the grouping depth or runtime collection implementation is not statically known.
+The `preserveKeys` argument controls the innermost keys. For Eloquent collections,
+the two innermost levels retain the receiver's class; remaining levels use Support
+collections. A selector list not known at analysis time receives a less precise type.
 
 ## Model Properties
 

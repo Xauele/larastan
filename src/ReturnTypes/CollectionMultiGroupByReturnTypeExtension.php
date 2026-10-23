@@ -10,6 +10,7 @@ use PhpParser\Node\Expr\MethodCall;
 use PHPStan\Analyser\Scope;
 use PHPStan\Reflection\MethodReflection;
 use PHPStan\Type\BenevolentUnionType;
+use PHPStan\Type\Constant\ConstantBooleanType;
 use PHPStan\Type\DynamicMethodReturnTypeExtension;
 use PHPStan\Type\ErrorType;
 use PHPStan\Type\Generic\GenericObjectType;
@@ -18,8 +19,8 @@ use PHPStan\Type\StringType;
 use PHPStan\Type\Type;
 use PHPStan\Type\TypeCombinator;
 
+use function array_values;
 use function count;
-use function in_array;
 
 /**
  * Reconstruct the nested collection structure returned by groupBy([key1, key2, ...]).
@@ -32,8 +33,6 @@ use function in_array;
  */
 final class CollectionMultiGroupByReturnTypeExtension implements DynamicMethodReturnTypeExtension
 {
-    private const MAX_GROUPS = 8;
-
     public function getClass(): string
     {
         return Collection::class;
@@ -46,28 +45,13 @@ final class CollectionMultiGroupByReturnTypeExtension implements DynamicMethodRe
 
     public function getTypeFromMethodCall(MethodReflection $methodReflection, MethodCall $methodCall, Scope $scope): Type|null
     {
-        $groupBy      = null;
-        $preserveKeys = null;
+        $args = $methodCall->getArgs();
 
-        foreach ($methodCall->getArgs() as $index => $argument) {
-            if ($argument->unpack) {
-                return null;
-            }
-
-            $name = $argument->name?->name;
-
-            if ($name === 'groupBy' || ($name === null && $index === 0)) {
-                $groupBy = $argument->value;
-            } elseif ($name === 'preserveKeys' || ($name === null && $index === 1)) {
-                $preserveKeys = $argument->value;
-            }
-        }
-
-        if ($groupBy === null) {
+        if ($args === [] || $args[0]->unpack || (isset($args[1]) && $args[1]->unpack)) {
             return null;
         }
 
-        $groupByType    = $scope->getType($groupBy);
+        $groupByType    = $scope->getType($args[0]->value);
         $constantArrays = $groupByType->getConstantArrays();
 
         if (
@@ -81,7 +65,7 @@ final class CollectionMultiGroupByReturnTypeExtension implements DynamicMethodRe
         $groups = $constantArrays[0]->getValueTypes();
         $depth  = count($groups);
 
-        if ($depth < 2 || $depth > self::MAX_GROUPS) {
+        if ($depth === 0) {
             return null;
         }
 
@@ -111,10 +95,28 @@ final class CollectionMultiGroupByReturnTypeExtension implements DynamicMethodRe
             return null;
         }
 
-        // A custom collection may override groupBy() with different semantics.
-        $collectionClass = $receiverClasses[0];
+        // An override can change the grouping semantics.
+        if ($methodReflection->getDeclaringClass()->getName() !== Collection::class) {
+            return null;
+        }
 
-        if (! in_array($collectionClass, [Collection::class, EloquentCollection::class], true)) {
+        $collectionClass = $receiverClasses[0];
+        $reflections     = $receiver->getObjectClassReflections();
+
+        // Rebuilding a subclass requires its usual key/value template pair.
+        if (count($reflections) !== 1 || count($reflections[0]->getTemplateTypeMap()->getTypes()) !== 2) {
+            return null;
+        }
+
+        $templates = array_values($reflections[0]->getTemplateTypeMap()->getTypes());
+        $declared  = new GenericObjectType($collectionClass, $templates);
+
+        // Two parameters alone are not enough: subclasses may reverse their
+        // order or fix an ancestor parameter instead of forwarding it.
+        if (
+            ! $declared->getTemplateType(Collection::class, 'TKey')->equals($templates[0])
+            || ! $declared->getTemplateType(Collection::class, 'TValue')->equals($templates[1])
+        ) {
             return null;
         }
 
@@ -125,34 +127,28 @@ final class CollectionMultiGroupByReturnTypeExtension implements DynamicMethodRe
             return null;
         }
 
-        $leafKeyType = new IntegerType();
+        $preserveType = (isset($args[1]) ? $scope->getType($args[1]->value) : new ConstantBooleanType(false))->toBoolean();
+        $leafKeyType  = new IntegerType();
 
-        if ($preserveKeys !== null) {
-            $preserveType = $scope->getType($preserveKeys);
-
-            if (! $preserveType->isBoolean()->yes()) {
-                return null;
-            }
-
-            if ($preserveType->isTrue()->yes()) {
-                $leafKeyType = $keyType;
-            } elseif (! $preserveType->isFalse()->yes()) {
-                $leafKeyType = TypeCombinator::union(new IntegerType(), $keyType);
-            }
+        if ($preserveType->isTrue()->yes()) {
+            $leafKeyType = $keyType;
+        } elseif (! $preserveType->isFalse()->yes()) {
+            $leafKeyType = TypeCombinator::union(new IntegerType(), $keyType);
         }
 
-        // At runtime Eloquent::groupBy() yields Eloquent leaf collections, but
-        // mapping collections instead of models converts outer levels into
-        // Support collections. Use the common Support parent for those levels.
-        $leafCollection = $collectionClass === EloquentCollection::class
-            ? EloquentCollection::class
-            : Collection::class;
-
-        $result       = new GenericObjectType($leafCollection, [$leafKeyType, $valueType]);
         $groupKeyType = new BenevolentUnionType([new IntegerType(), new StringType()]);
+        $result       = new GenericObjectType($collectionClass, [$leafKeyType, $valueType]);
+        $result       = new GenericObjectType($collectionClass, [$groupKeyType, $result]);
 
-        for ($level = 0; $level < $depth; $level++) {
-            $result = new GenericObjectType(Collection::class, [$groupKeyType, $result]);
+        // Eloquent::map() converts collections of non-model values to Support.
+        // The final groupBy() does not map, so the two innermost levels retain
+        // the receiver's class, including custom collection subclasses.
+        $outerClass = $reflections[0]->isSubclassOf(EloquentCollection::class) || $collectionClass === EloquentCollection::class
+            ? Collection::class
+            : $collectionClass;
+
+        for ($level = 1; $level < $depth; $level++) {
+            $result = new GenericObjectType($outerClass, [$groupKeyType, $result]);
         }
 
         return $result;

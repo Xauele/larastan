@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace CollectionMultiGroupBy;
 
+use App\Account;
+use App\AccountCollection;
+use App\NonGenericCollection;
+use App\OnlyValueGenericCollection;
 use App\User;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection as SupportCollection;
@@ -47,12 +51,12 @@ function test(SupportCollection $rows, EloquentCollection $users, bool $preserve
     );
 
     assertType(
-        'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Database\Eloquent\Collection<int, App\User>>>',
+        'Illuminate\Support\Collection<(int|string), Illuminate\Database\Eloquent\Collection<(int|string), Illuminate\Database\Eloquent\Collection<int, App\User>>>',
         $users->groupBy(['id', 'name']),
     );
 
     assertType(
-        'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Database\Eloquent\Collection<int, App\User>>>>',
+        'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Database\Eloquent\Collection<(int|string), Illuminate\Database\Eloquent\Collection<int, App\User>>>>',
         $users->groupBy(['id', 'name', 'email']),
     );
 }
@@ -67,19 +71,19 @@ function dynamicSelectors(
     array $dynamicSelectors,
     array $optionalSelectors,
 ): void {
-    // The existing stub is intentionally preserved for non-constant groups.
+    // Unknown depths must not promise Eloquent-only methods or integer group keys.
     assertType(
-        'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<int, mixed>>',
+        'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), mixed>>',
         $rows->groupBy($dynamicSelectors),
     );
 
     assertType(
-        'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<int, mixed>>',
+        'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), mixed>>',
         $rows->groupBy($optionalSelectors),
     );
 
     assertType(
-        'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<int, mixed>>',
+        'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<int, array{department: string, region: string, city: string}>>',
         $rows->groupBy(['department']),
     );
 }
@@ -98,7 +102,7 @@ function arrayCallableIsOneSelector(SupportCollection $rows): void
 {
     // Laravel's useAsCallable() handles this as one callback, not two levels.
     assertType(
-        'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<int, mixed>>',
+        'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), mixed>>',
         $rows->groupBy([GroupingCallback::class, 'byDepartment']),
     );
 }
@@ -112,7 +116,7 @@ function arrayCallableIsOneSelector(SupportCollection $rows): void
 function potentiallyCallablePair(SupportCollection $rows, string $candidate): void
 {
     assertType(
-        'Illuminate\\Support\\Collection<(int|string), Illuminate\\Support\\Collection<int, mixed>>',
+        'Illuminate\\Support\\Collection<(int|string), Illuminate\\Support\\Collection<(int|string), mixed>>',
         $rows->groupBy([$candidate, 'byDepartment']),
     );
 }
@@ -120,15 +124,146 @@ function potentiallyCallablePair(SupportCollection $rows, string $candidate): vo
 /** @param SupportCollection<string, array{department: string, region: string, city: string}> $rows */
 function selectorDepthBoundary(SupportCollection $rows): void
 {
-    // MAX_GROUPS is intentionally eight. Verify the exact final boundary.
+    // Both sides of the former eight-selector boundary remain precise.
     assertType(
         'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<int, array{department: string, region: string, city: string}>>>>>>>>>',
         $rows->groupBy(['department', 'region', 'city', 'department', 'region', 'city', 'department', 'region']),
     );
 
-    // Nine selectors must keep the original Laravel/PHPStan fallback type.
+    // Depth comes from the constant array, without an arbitrary upper bound.
     assertType(
-        'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<int, mixed>>',
+        'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<int, array{department: string, region: string, city: string}>>>>>>>>>>',
         $rows->groupBy(['department', 'region', 'city', 'department', 'region', 'city', 'department', 'region', 'city']),
+    );
+}
+
+/**
+ * @template TKey of array-key
+ * @template TValue
+ * @extends SupportCollection<TKey, TValue>
+ */
+class CustomSupportCollection extends SupportCollection
+{
+}
+
+/**
+ * @template TKey of array-key
+ * @template TValue
+ * @extends SupportCollection<TKey, TValue>
+ */
+class OverriddenGroupingCollection extends SupportCollection
+{
+    /** @return static<int, string> */
+    public function groupBy($groupBy, $preserveKeys = false)
+    {
+        return new static(['overridden']);
+    }
+}
+
+/**
+ * @param CustomSupportCollection<string, User> $support
+ * @param AccountCollection<string, Account> $accounts
+ * @param OnlyValueGenericCollection<User> $valueOnly
+ * @param OverriddenGroupingCollection<string, User> $overridden
+ */
+function customCollections(
+    CustomSupportCollection $support,
+    AccountCollection $accounts,
+    OnlyValueGenericCollection $valueOnly,
+    NonGenericCollection $nonGeneric,
+    OverriddenGroupingCollection $overridden,
+): void {
+    assertType(
+        'CollectionMultiGroupBy\CustomSupportCollection<(int|string), CollectionMultiGroupBy\CustomSupportCollection<(int|string), CollectionMultiGroupBy\CustomSupportCollection<string, App\User>>>',
+        $support->groupBy(['id', 'name'], true),
+    );
+    assertType(
+        'Illuminate\Support\Collection<(int|string), App\AccountCollection<(int|string), App\AccountCollection<int, App\Account>>>',
+        $accounts->groupBy(['id', 'name']),
+    );
+    assertType(
+        'App\AccountCollection<(int|string), App\AccountCollection<string, App\Account>>',
+        $accounts->groupBy(['name'], true),
+    );
+    assertType(
+        'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), mixed>>',
+        $valueOnly->groupBy(['id', 'name']),
+    );
+    assertType(
+        'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), mixed>>',
+        $nonGeneric->groupBy(['id', 'name']),
+    );
+    assertType('CollectionMultiGroupBy\OverriddenGroupingCollection<int, string>', $overridden->groupBy(['id', 'name']));
+}
+
+/**
+ * @param SupportCollection<string, User> $rows
+ * @param EloquentCollection<string, User> $users
+ * @param list<string> $keys
+ * @param mixed $preserve
+ */
+function keyPreservationAndFallback(SupportCollection $rows, EloquentCollection $users, array $keys, $preserve): void
+{
+    assertType(
+        'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<string, App\User>>>',
+        $rows->groupBy(preserveKeys: true, groupBy: ['id', 'name']),
+    );
+    assertType(
+        'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<string, App\User>>>',
+        $rows->groupBy(['id', 'name'], 1),
+    );
+    assertType(
+        'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<int, App\User>>>',
+        $rows->groupBy(['id', 'name'], 0),
+    );
+    assertType(
+        'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<int|string, App\User>>>',
+        $rows->groupBy(['id', 'name'], $preserve),
+    );
+    assertType(
+        'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), mixed>>',
+        $users->groupBy($keys),
+    );
+    assertType(
+        'Illuminate\Database\Eloquent\Collection<(int|string), Illuminate\Database\Eloquent\Collection<int, App\User>>',
+        $users->groupBy(['name']),
+    );
+    assertType(
+        'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), mixed>>',
+        $rows->groupBy([]),
+    );
+}
+
+/**
+ * @template TValue
+ * @template TKey of array-key
+ * @extends SupportCollection<TKey, TValue>
+ */
+class ReversedCollection extends SupportCollection
+{
+}
+
+/**
+ * @template TUnused
+ * @template TValue
+ * @extends SupportCollection<string, TValue>
+ */
+class FixedKeyCollection extends SupportCollection
+{
+}
+
+/**
+ * @param ReversedCollection<User, string> $reversed
+ * @param FixedKeyCollection<string, User> $fixed
+ */
+function nonCanonicalTemplates(ReversedCollection $reversed, FixedKeyCollection $fixed): void
+{
+    assertType(
+        'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), mixed>>',
+        $reversed->groupBy(['id', 'name']),
+    );
+    assertType(
+        'Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), mixed>>',
+        $fixed->groupBy(['id', 'name']),
     );
 }

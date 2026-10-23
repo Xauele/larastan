@@ -23,6 +23,14 @@ class IntegrationTest extends PHPStanTestCase
     {
         self::getContainer();
 
+        yield 'collection-multi-group-by' => [
+            __DIR__ . '/data/collection-multi-group-by.php',
+            [
+                16 => ['Call to an undefined method Illuminate\Support\Collection<(int|string), Illuminate\Support\Collection<(int|string), mixed>>::load().'],
+                17 => ['Call to an undefined method Illuminate\Support\Collection<(int|string), Illuminate\Database\Eloquent\Collection<(int|string), Illuminate\Database\Eloquent\Collection<int, App\User>>>::load().'],
+            ],
+        ];
+
         yield [__DIR__ . '/data/bug-2074.php'];
         yield [__DIR__ . '/data/bug-2426.php'];
         yield [__DIR__ . '/data/bug-2431.php'];
