@@ -399,6 +399,17 @@ class IntegrationTest extends PHPStanTestCase
         }
     }
 
+    public function testMultiGroupByRejectsEloquentMethods(): void
+    {
+        $errors = $this->runAnalyse(__DIR__ . '/data/collection-multi-group-by.php');
+
+        self::assertCount(2, $errors);
+        self::assertSame(16, $errors[0]->getLine());
+        self::assertSame(17, $errors[1]->getLine());
+        self::assertSame('method.notFound', $errors[0]->getIdentifier());
+        self::assertSame('method.notFound', $errors[1]->getIdentifier());
+    }
+
     /**
      * @see https://github.com/phpstan/phpstan-src/blob/c9772621c0bd6eab7e02fdaa03714bea239b372d/tests/PHPStan/Analyser/AnalyserIntegrationTest.php#L604-L622
      * @see https://github.com/phpstan/phpstan/discussions/6888#discussioncomment-2423613
