@@ -36,6 +36,15 @@ class IntegrationTest extends PHPStanTestCase
             ],
         ];
 
+        yield 'bug-2582' => [__DIR__ . '/data/bug-2582.php'];
+
+        yield 'bug-1744' => [
+            __DIR__ . '/data/bug-1744.php',
+            [
+                13 => ['Property App\ModelWithDateColumnCasts::$created_at (Carbon\Carbon|string|null) does not accept array<string, string|null>.'],
+            ],
+        ];
+
         yield [__DIR__ . '/data/bug-final_model_query.php'];
         yield [__DIR__ . '/data/test-case-extension.php', [34 => ['Call to function method_exists() with $this(TestTestCase) and \'partialMock\' will always evaluate to true.']]];
         yield [__DIR__ . '/data/model-builder.php'];
@@ -45,11 +54,11 @@ class IntegrationTest extends PHPStanTestCase
         yield 'model-with-relations' => [
             __DIR__ . '/data/model-with-relations.php',
             [
-                27 => ['Parameter #1 $relations of static method Illuminate\Database\Eloquent\Model::with() expects array<int|string, array<int|string, string>|(Closure(Illuminate\Database\Eloquent\Relations\Relation<*, *, *>): mixed)|string>|string, non-empty-array<string, Closure(Illuminate\Database\Eloquent\Relations\HasMany): void> given.'],
-                28 => ['Parameter #1 $relations of static method Illuminate\Database\Eloquent\Model::with() expects array<\'accounts\'|int, array<int|string, string>|(Closure(Illuminate\Database\Eloquent\Relations\HasMany<App\Account, App\User>): mixed)|string>|string, array{accounts: Closure(Illuminate\Database\Eloquent\Relations\BelongsTo): void} given.'],
-                29 => ['Parameter #1 $relations of static method Illuminate\Database\Eloquent\Model::with() expects array<\'accounts\'|int, array<int|string, string>|(Closure(Illuminate\Database\Eloquent\Relations\HasMany<App\Account, App\User>): mixed)|string>|string, array{accounts: Closure(int): void} given.'],
+                27 => ['Parameter #1 $relations of static method Illuminate\Database\Eloquent\Model::with() expects array<int|string, array<mixed>|(Closure(Illuminate\Database\Eloquent\Relations\Relation<*, *, *>): mixed)|string>|string, non-empty-array<string, Closure(Illuminate\Database\Eloquent\Relations\HasMany): void> given.'],
+                28 => ['Parameter #1 $relations of static method Illuminate\Database\Eloquent\Model::with() expects array<\'accounts\'|int, array<mixed>|(Closure(Illuminate\Database\Eloquent\Relations\HasMany<App\Account, App\User>): mixed)|string>|string, array{accounts: Closure(Illuminate\Database\Eloquent\Relations\BelongsTo): void} given.'],
+                29 => ['Parameter #1 $relations of static method Illuminate\Database\Eloquent\Model::with() expects array<\'accounts\'|int, array<mixed>|(Closure(Illuminate\Database\Eloquent\Relations\HasMany<App\Account, App\User>): mixed)|string>|string, array{accounts: Closure(int): void} given.'],
                 30 => ['Relation \'missing\' is not found in App\User model.'],
-                31 => ['Parameter #1 $relations of static method Illuminate\Database\Eloquent\Model::with() expects array<int|string, array<int|string, string>|(Closure(Illuminate\Database\Eloquent\Relations\Relation<*, *, *>): mixed)|string>|string, non-empty-array<string, Closure(Illuminate\Database\Eloquent\Relations\HasMany): void> given.'],
+                31 => ['Parameter #1 $relations of static method Illuminate\Database\Eloquent\Model::with() expects array<int|string, array<mixed>|(Closure(Illuminate\Database\Eloquent\Relations\Relation<*, *, *>): mixed)|string>|string, non-empty-array<string, Closure(Illuminate\Database\Eloquent\Relations\HasMany): void> given.'],
                 34 => ['Parameter #1 $relation of function ModelWithRelationsIntegration\acceptsAccounts expects Illuminate\Database\Eloquent\Relations\HasMany<App\Account, App\User>, Illuminate\Database\Eloquent\Relations\BelongsTo<App\Group, App\User> given.'],
             ],
         ];
@@ -57,12 +66,12 @@ class IntegrationTest extends PHPStanTestCase
         yield 'eager-loading-callbacks' => [
             __DIR__ . '/data/eager-loading-callbacks.php',
             [
-                32 => ['Parameter #1 $relations of method Illuminate\Database\Eloquent\Builder<App\User>::with() expects \'accounts\'|array<\'accounts\'|int, array<int|string, string>|(Closure(Illuminate\Database\Eloquent\Relations\HasMany<App\Account, App\User>): mixed)|string>, array{accounts: Closure(Illuminate\Database\Eloquent\Relations\BelongsTo): void} given.'],
-                33 => ['Parameter #1 $relations of method Illuminate\Database\Eloquent\Builder<App\User>::withOnly() expects array<\'accounts\'|int, array<int|string, string>|(Closure(Illuminate\Database\Eloquent\Relations\HasMany<App\Account, App\User>): mixed)|string>|string, array{accounts: Closure(int): void} given.'],
-                34 => ['Parameter #1 $relations of method Illuminate\Database\Eloquent\Model::load() expects array<\'accounts\'|int, array<int|string, string>|(Closure(Illuminate\Database\Eloquent\Relations\HasMany<App\Account, App\User>): mixed)|string>|string, array{accounts: Closure(Illuminate\Database\Eloquent\Relations\BelongsTo): void} given.'],
-                35 => ['Parameter #1 $relations of method Illuminate\Database\Eloquent\Model::loadMissing() expects array<\'group\'|int, array<int|string, string>|(Closure(Illuminate\Database\Eloquent\Relations\BelongsTo<App\Group, App\User>): mixed)|string>|string, array{group: Closure(Illuminate\Database\Eloquent\Relations\HasMany): void} given.'],
-                36 => ['Parameter #1 $relations of method Illuminate\Database\Eloquent\Collection<int,App\User>::load() expects array<\'accounts\'|int, array<int|string, string>|(callable(Illuminate\Database\Eloquent\Relations\HasMany<App\Account, App\User>): mixed)|string>|string, array{accounts: Closure(Illuminate\Database\Eloquent\Relations\BelongsTo): void} given.'],
-                37 => ['Parameter #1 $relations of method Illuminate\Database\Eloquent\Collection<int,App\User>::loadMissing() expects array<\'group\'|int, array<int|string, string>|(callable(Illuminate\Database\Eloquent\Relations\BelongsTo<App\Group, App\User>): mixed)|string>|string, array{group: Closure(Illuminate\Database\Eloquent\Relations\HasMany): void} given.'],
+                32 => ['Parameter #1 $relations of method Illuminate\Database\Eloquent\Builder<App\User>::with() expects \'accounts\'|array<\'accounts\'|int, array<mixed>|(Closure(Illuminate\Database\Eloquent\Relations\HasMany<App\Account, App\User>): mixed)|string>, array{accounts: Closure(Illuminate\Database\Eloquent\Relations\BelongsTo): void} given.'],
+                33 => ['Parameter #1 $relations of method Illuminate\Database\Eloquent\Builder<App\User>::withOnly() expects array<\'accounts\'|int, array<mixed>|(Closure(Illuminate\Database\Eloquent\Relations\HasMany<App\Account, App\User>): mixed)|string>|string, array{accounts: Closure(int): void} given.'],
+                34 => ['Parameter #1 $relations of method Illuminate\Database\Eloquent\Model::load() expects array<\'accounts\'|int, array<mixed>|(Closure(Illuminate\Database\Eloquent\Relations\HasMany<App\Account, App\User>): mixed)|string>|string, array{accounts: Closure(Illuminate\Database\Eloquent\Relations\BelongsTo): void} given.'],
+                35 => ['Parameter #1 $relations of method Illuminate\Database\Eloquent\Model::loadMissing() expects array<\'group\'|int, array<mixed>|(Closure(Illuminate\Database\Eloquent\Relations\BelongsTo<App\Group, App\User>): mixed)|string>|string, array{group: Closure(Illuminate\Database\Eloquent\Relations\HasMany): void} given.'],
+                36 => ['Parameter #1 $relations of method Illuminate\Database\Eloquent\Collection<int,App\User>::load() expects array<\'accounts\'|int, array<mixed>|(callable(Illuminate\Database\Eloquent\Relations\HasMany<App\Account, App\User>): mixed)|string>|string, array{accounts: Closure(Illuminate\Database\Eloquent\Relations\BelongsTo): void} given.'],
+                37 => ['Parameter #1 $relations of method Illuminate\Database\Eloquent\Collection<int,App\User>::loadMissing() expects array<\'group\'|int, array<mixed>|(callable(Illuminate\Database\Eloquent\Relations\BelongsTo<App\Group, App\User>): mixed)|string>|string, array{group: Closure(Illuminate\Database\Eloquent\Relations\HasMany): void} given.'],
                 38 => ['Relation \'missing\' is not found in App\User model.'],
                 39 => ['Parameter #2 $callback of method Illuminate\Database\Eloquent\Builder<App\User>::with() expects (Closure(Illuminate\Database\Eloquent\Relations\HasMany<App\Account, App\User>): mixed)|string|null, Closure(Illuminate\Database\Eloquent\Relations\BelongsTo): void given.'],
             ],
@@ -108,6 +117,7 @@ class IntegrationTest extends PHPStanTestCase
                 101 => ['Property App\User::$decimal (float|int|numeric-string) does not accept array{}.'],
                 110 => ['Property App\User::$nullable_decimal (float|int|numeric-string|null) does not accept \'foo\'.'],
                 111 => ['Property App\User::$nullable_decimal (float|int|numeric-string|null) does not accept array{}.'],
+                118 => ['Property App\User::$enum_collection (iterable<App\Casts\BackedEnumeration>|null) does not accept array<int, App\Casts\BasicEnumeration>.'],
             ],
         ];
 
@@ -238,6 +248,27 @@ class IntegrationTest extends PHPStanTestCase
             ],
         ];
 
+        yield 'with-attributes' => [
+            __DIR__ . '/data/model-property-with-attributes.php',
+            [
+                6 => ['Parameter #1 $attributes of method Illuminate\Database\Eloquent\Builder<App\User>::withAttributes() expects array<model property of App\User, mixed>|Illuminate\Contracts\Database\Query\Expression|model property of App\User, array<string, string> given.'],
+                7 => ['Parameter #1 $attributes of method Illuminate\Database\Eloquent\Builder<App\User>::withAttributes() expects array<model property of App\User, mixed>|Illuminate\Contracts\Database\Query\Expression|model property of App\User, string given.'],
+                14 => ['Parameter #1 $attributes of static method Illuminate\Database\Eloquent\Builder<App\User>::withAttributes() expects array<model property of App\User, mixed>|Illuminate\Contracts\Database\Query\Expression|model property of App\User, array<string, string> given.'],
+                18 => ['Parameter #1 $attributes of method Illuminate\Database\Eloquent\Builder<App\Account>::withAttributes() expects array<model property of App\Account, mixed>|Illuminate\Contracts\Database\Query\Expression|model property of App\Account, array<string, string> given.'],
+                19 => ['Parameter #1 $attributes of method Illuminate\Database\Eloquent\Builder<App\Account>::withAttributes() expects array<model property of App\Account, mixed>|Illuminate\Contracts\Database\Query\Expression|model property of App\Account, string given.'],
+            ],
+        ];
+
+        if (laravel_version_compare('12.4.0', '>=')) {
+            yield 'with-attributes-as-conditions' => [
+                __DIR__ . '/data/model-property-with-attributes-l12-4.php',
+                [
+                    5 => ['Parameter #1 $attributes of method Illuminate\Database\Eloquent\Builder<App\User>::withAttributes() expects array<model property of App\User, mixed>|Illuminate\Contracts\Database\Query\Expression|model property of App\User, array<string, string> given.'],
+                    6 => ['Parameter #1 $attributes of method Illuminate\Database\Eloquent\Builder<App\User>::withAttributes() expects array<model property of App\User, mixed>|Illuminate\Contracts\Database\Query\Expression|model property of App\User, string given.'],
+                ],
+            ];
+        }
+
         if (laravel_version_compare('13.3.0', '>=')) {
             yield 'increment-each' => [
                 __DIR__ . '/data/model-property-increment-each-l13-3.php',
@@ -302,6 +333,16 @@ class IntegrationTest extends PHPStanTestCase
             ],
         ];
 
+        yield 'fill' => [
+            __DIR__ . '/data/model-property-fill.php',
+            [
+                10 => ['Parameter #1 $attributes of method Illuminate\Database\Eloquent\Model::fill() expects array<model property of App\User, mixed>, array<string, string> given.'],
+                11 => ['Parameter #1 $attributes of method Illuminate\Database\Eloquent\Model::forceFill() expects array<model property of App\User, mixed>, array<string, string> given.'],
+                29 => ['Parameter #1 $attributes of method Illuminate\Database\Eloquent\Model::fill() expects array<model property of static(ModelPropertyFill\FillOnModel), mixed>, array<string, string> given.'],
+                30 => ['Parameter #1 $attributes of method Illuminate\Database\Eloquent\Model::forceFill() expects array<model property of static(ModelPropertyFill\FillOnModel), mixed>, array<string, string> given.'],
+            ],
+        ];
+
         yield [
             __DIR__ . '/data/model-property-model-factory.php',
             [
@@ -331,6 +372,18 @@ class IntegrationTest extends PHPStanTestCase
                 7 => ['Parameter #1 $records of method Illuminate\Database\Eloquent\Relations\HasOneOrMany<App\Account,App\User,Illuminate\Database\Eloquent\Collection<int, App\Account>>::createManyQuietly() expects iterable<array<model property of App\Account, mixed>>, array<int, array<string, string>> given.'],
             ],
         ];
+
+        if (laravel_version_compare('12.8.0', '>=')) {
+            yield 'relation-force-create-many' => [
+                __DIR__ . '/data/model-property-force-create-many-l12-8.php',
+                [
+                    6 => ['Parameter #1 $records of method Illuminate\Database\Eloquent\Relations\HasOneOrMany<App\Account,App\User,Illuminate\Database\Eloquent\Collection<int, App\Account>>::forceCreateMany() expects iterable<array<model property of App\Account, mixed>>, array<int, array<string, string>> given.'],
+                    7 => ['Parameter #1 $records of method Illuminate\Database\Eloquent\Relations\HasOneOrMany<App\Account,App\User,Illuminate\Database\Eloquent\Collection<int, App\Account>>::forceCreateManyQuietly() expects iterable<array<model property of App\Account, mixed>>, array<int, array<string, string>> given.'],
+                    8 => ['Parameter #1 $records of method Illuminate\Database\Eloquent\Relations\HasOneOrMany<App\Address,App\User,Illuminate\Database\Eloquent\Collection<int, App\Address>>::forceCreateMany() expects iterable<array<model property of App\Address, mixed>>, array<int, array<string, string>> given.'],
+                    23 => ['Parameter #1 $records of method Illuminate\Database\Eloquent\Relations\HasOneOrMany<App\Account,App\User,Illuminate\Database\Eloquent\Collection<int, App\Account>>::forceCreateMany() expects iterable<array<model property of App\Account, mixed>>, array<int, array<string, string>> given.'],
+                ],
+            ];
+        }
 
         yield [
             __DIR__ . '/data/model-property-static-call.php',
