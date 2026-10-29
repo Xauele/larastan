@@ -48,6 +48,15 @@ class IntegrationTest extends PHPStanTestCase
         yield [__DIR__ . '/data/bug-final_model_query.php'];
         yield [__DIR__ . '/data/test-case-extension.php', [34 => ['Call to function method_exists() with $this(TestTestCase) and \'partialMock\' will always evaluate to true.']]];
         yield [__DIR__ . '/data/model-builder.php'];
+
+        yield 'eloquent-builder-paginate' => [
+            __DIR__ . '/data/eloquent-builder-paginate.php',
+            [
+                34 => ['Parameter #1 $perPage of method Illuminate\Database\Eloquent\Builder<App\User>::paginate() expects (Closure(int): (int|null))|int|null, Closure(string): 15 given.'],
+                35 => ['Parameter #1 $perPage of method Illuminate\Database\Eloquent\Builder<App\User>::paginate() expects (Closure(int): (int|null))|int|null, Closure(int): \'15\' given.'],
+            ],
+        ];
+
         yield [__DIR__ . '/data/custom-builder-return-this.php'];
         yield 'framework-docblock-types' => [__DIR__ . '/data/framework-docblock-types.php'];
 
@@ -265,6 +274,21 @@ class IntegrationTest extends PHPStanTestCase
                 [
                     5 => ['Parameter #1 $attributes of method Illuminate\Database\Eloquent\Builder<App\User>::withAttributes() expects array<model property of App\User, mixed>|Illuminate\Contracts\Database\Query\Expression|model property of App\User, array<string, string> given.'],
                     6 => ['Parameter #1 $attributes of method Illuminate\Database\Eloquent\Builder<App\User>::withAttributes() expects array<model property of App\User, mixed>|Illuminate\Contracts\Database\Query\Expression|model property of App\User, string given.'],
+                ],
+            ];
+        }
+
+        if (laravel_version_compare('12.6.0', '>=')) {
+            yield 'fill-and-insert' => [
+                __DIR__ . '/data/model-property-fill-and-insert-l12-6.php',
+                [
+                    5 => ['Parameter #1 $values of method Illuminate\Database\Eloquent\Builder<App\User>::fillAndInsert() expects array<int, array<model property of App\User, mixed>>, array<int, array<string, string>> given.'],
+                    6 => ['Parameter #1 $values of method Illuminate\Database\Eloquent\Builder<App\User>::fillAndInsertOrIgnore() expects array<int, array<model property of App\User, mixed>>, array<int, array<string, string>> given.'],
+                    7 => ['Parameter #1 $values of method Illuminate\Database\Eloquent\Builder<App\User>::fillAndInsertGetId() expects array<model property of App\User, mixed>, array<string, string> given.'],
+                    8 => ['Parameter #1 $values of method Illuminate\Database\Eloquent\Builder<App\User>::fillForInsert() expects array<int, array<model property of App\User, mixed>>, array<int, array<string, string>> given.'],
+                    16 => ['Parameter #1 $values of static method Illuminate\Database\Eloquent\Builder<App\User>::fillAndInsert() expects array<int, array<model property of App\User, mixed>>, array<int, array<string, string>> given.'],
+                    29 => ['Parameter #1 $values of method Illuminate\Database\Eloquent\Builder<App\User>::fillAndInsert() expects array<int, array<model property of App\User, mixed>>, array<int, array<string, string>> given.'],
+                    34 => ['Parameter #1 $values of method Illuminate\Database\Eloquent\Builder<App\Account>::fillAndInsert() expects array<int, array<model property of App\Account, mixed>>, array<int, array<string, string>> given.'],
                 ],
             ];
         }
